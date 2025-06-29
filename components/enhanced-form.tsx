@@ -374,8 +374,8 @@ export default function EnhancedForm({ isLoading, onSubmit, onOpenOptions }: Enh
               )}
 
               {/* Main input area */}
-              <div className="p-6">
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-start gap-3 sm:gap-4">
+              <div className="p-8">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-start gap-4 sm:gap-6">
                   {/* Action buttons */}
                   <div className="flex flex-row sm:flex-col gap-3 justify-center sm:justify-start">
                     <input
@@ -397,20 +397,20 @@ export default function EnhancedForm({ isLoading, onSubmit, onOpenOptions }: Enh
                           size="icon"
                           onClick={triggerFileInput}
                           className={cn(
-                            "h-10 w-10 sm:h-12 sm:w-12 rounded-xl sm:rounded-2xl bg-gradient-to-r from-blue-500/10 to-cyan-500/10 hover:from-blue-500/20 hover:to-cyan-500/20 border border-blue-500/30 hover:border-blue-400/50 transition-all duration-500 hover:scale-105 sm:hover:scale-110 hover:rotate-3",
+                            "h-12 w-12 sm:h-14 sm:w-14 rounded-2xl bg-gradient-to-br from-blue-500/15 via-blue-500/10 to-cyan-500/15 hover:from-blue-500/25 hover:via-blue-500/20 hover:to-cyan-500/25 border-2 border-blue-500/30 hover:border-blue-400/50 transition-all duration-500 hover:scale-105 sm:hover:scale-110 hover:rotate-3 shadow-lg hover:shadow-blue-500/25 backdrop-blur-sm",
                             previewUrls.length >= 5 && "opacity-50 cursor-not-allowed",
                             isUploading && "animate-pulse",
                           )}
                           disabled={isLoading || isUploading || previewUrls.length >= 5}
                         >
                           {isUploading ? (
-                            <div className="animate-spin rounded-full h-5 w-5 sm:h-6 sm:w-6 border-2 border-blue-400 border-t-transparent" />
+                            <div className="animate-spin rounded-full h-6 w-6 sm:h-7 sm:w-7 border-2 border-blue-400 border-t-transparent" />
                           ) : (
-                            <CloudUpload className="h-5 w-5 sm:h-6 sm:w-6 text-blue-400" />
+                            <CloudUpload className="h-6 w-6 sm:h-7 sm:w-7 text-blue-400" />
                           )}
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent className="bg-slate-800 border-white/20">
+                      <TooltipContent className="bg-slate-800 border-white/20 shadow-xl">
                         <p>{previewUrls.length >= 5 ? "Maximum 5 images allowed" : "Upload reference images"}</p>
                       </TooltipContent>
                     </Tooltip>
@@ -423,50 +423,74 @@ export default function EnhancedForm({ isLoading, onSubmit, onOpenOptions }: Enh
                           size="icon"
                           onClick={onOpenOptions}
                           className={cn(
-                            "h-10 w-10 sm:h-12 sm:w-12 rounded-xl sm:rounded-2xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 hover:from-purple-500/20 hover:to-pink-500/20 border border-purple-500/30 hover:border-purple-400/50 transition-all duration-500 hover:scale-105 sm:hover:scale-110 hover:rotate-12",
+                            "h-12 w-12 sm:h-14 sm:w-14 rounded-2xl bg-gradient-to-br from-purple-500/15 via-purple-500/10 to-pink-500/15 hover:from-purple-500/25 hover:via-purple-500/20 hover:to-pink-500/25 border-2 border-purple-500/30 hover:border-purple-400/50 transition-all duration-500 hover:scale-105 sm:hover:scale-110 hover:rotate-12 shadow-lg hover:shadow-purple-500/25 backdrop-blur-sm",
                             isLoading && "opacity-50 cursor-not-allowed",
                           )}
                         >
-                          <Settings2 className="h-5 w-5 sm:h-6 sm:w-6 text-purple-400" />
+                          <Settings2 className="h-6 w-6 sm:h-7 sm:w-7 text-purple-400" />
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent className="bg-slate-800 border-white/20">
+                      <TooltipContent className="bg-slate-800 border-white/20 shadow-xl">
                         <p>Advanced settings & AI recommendations</p>
                       </TooltipContent>
                     </Tooltip>
                   </div>
 
-                  {/* Text input area */}
+                  {/* Enhanced text input area */}
                   <div className="flex-1 relative">
-                    <div className="relative">
-                      <AutoResizeTextarea
-                        placeholder={isMobile ? "Describe your 3D model..." : "Describe your 3D model in detail..."}
-                        className="w-full bg-transparent border-0 focus:ring-0 text-white placeholder:text-gray-400 py-3 sm:py-4 px-4 sm:px-6 resize-none text-sm sm:text-base lg:text-lg min-h-[48px] sm:min-h-[60px] transition-all duration-300 rounded-xl sm:rounded-2xl focus:bg-white/5"
-                        {...form.register("prompt")}
-                        onFocus={handleFocus}
-                        onBlur={handleBlur}
-                        onKeyDown={handleKeyDown}
-                        disabled={isLoading}
-                        maxLength={500}
-                      />
+                    <div className="relative group">
+                      {/* Input container with enhanced styling */}
+                      <div
+                        className={cn(
+                          "relative rounded-2xl bg-gradient-to-br from-slate-800/60 via-gray-800/60 to-slate-700/60 backdrop-blur-xl border-2 transition-all duration-500 shadow-xl",
+                          isFocused
+                            ? "border-white/40 shadow-white/10 bg-gradient-to-br from-slate-800/80 via-gray-800/80 to-slate-700/80"
+                            : "border-white/20 hover:border-white/30",
+                        )}
+                      >
+                        {/* Subtle inner glow effect */}
+                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
 
-                      {/* Character count */}
-                      {promptValue && (
-                        <div className="absolute bottom-2 sm:bottom-3 right-2 sm:right-3">
-                          <span
-                            className={cn(
-                              "text-xs px-2 sm:px-3 py-1 rounded-full backdrop-blur-sm transition-all duration-300 border",
-                              promptValue.length > 450
-                                ? "text-red-400 bg-red-900/30 border-red-500/30"
-                                : promptValue.length > 400
-                                  ? "text-yellow-400 bg-yellow-900/30 border-yellow-500/30"
-                                  : "text-gray-400 bg-gray-900/30 border-gray-500/30",
-                            )}
-                          >
-                            {promptValue.length}/500
-                          </span>
-                        </div>
-                      )}
+                        <AutoResizeTextarea
+                          placeholder={isMobile ? "Describe your 3D model..." : "Describe your 3D model in detail..."}
+                          className="w-full bg-transparent border-0 focus:ring-0 text-white placeholder:text-gray-400 py-5 sm:py-6 px-6 sm:px-8 resize-none text-base sm:text-lg lg:text-xl min-h-[60px] sm:min-h-[80px] transition-all duration-300 rounded-2xl focus:bg-transparent font-medium leading-relaxed"
+                          {...form.register("prompt")}
+                          onFocus={handleFocus}
+                          onBlur={handleBlur}
+                          onKeyDown={handleKeyDown}
+                          disabled={isLoading}
+                          maxLength={500}
+                        />
+
+                        {/* Enhanced character count */}
+                        {promptValue && (
+                          <div className="absolute bottom-3 sm:bottom-4 right-3 sm:right-4">
+                            <span
+                              className={cn(
+                                "text-xs font-medium px-3 sm:px-4 py-1.5 sm:py-2 rounded-full backdrop-blur-md transition-all duration-300 border shadow-lg",
+                                promptValue.length > 450
+                                  ? "text-red-300 bg-red-900/40 border-red-500/40 shadow-red-500/20"
+                                  : promptValue.length > 400
+                                    ? "text-yellow-300 bg-yellow-900/40 border-yellow-500/40 shadow-yellow-500/20"
+                                    : "text-gray-300 bg-gray-900/40 border-gray-500/40 shadow-gray-500/20",
+                              )}
+                            >
+                              {promptValue.length}/500
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Typing indicator line */}
+                        {isFocused && (
+                          <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-pulse" />
+                        )}
+                      </div>
+
+                      {/* Professional enhancement: subtle corner accents */}
+                      <div className="absolute -top-1 -left-1 w-4 h-4 border-l-2 border-t-2 border-white/30 rounded-tl-lg transition-all duration-500 group-hover:border-white/50" />
+                      <div className="absolute -top-1 -right-1 w-4 h-4 border-r-2 border-t-2 border-white/30 rounded-tr-lg transition-all duration-500 group-hover:border-white/50" />
+                      <div className="absolute -bottom-1 -left-1 w-4 h-4 border-l-2 border-b-2 border-white/30 rounded-bl-lg transition-all duration-500 group-hover:border-white/50" />
+                      <div className="absolute -bottom-1 -right-1 w-4 h-4 border-r-2 border-b-2 border-white/30 rounded-br-lg transition-all duration-500 group-hover:border-white/50" />
                     </div>
                   </div>
 
@@ -477,22 +501,27 @@ export default function EnhancedForm({ isLoading, onSubmit, onOpenOptions }: Enh
                         <Button
                           type="submit"
                           className={cn(
-                            "h-10 w-10 sm:h-12 sm:w-12 rounded-xl sm:rounded-2xl p-0 flex items-center justify-center transition-all duration-700 shadow-lg sm:shadow-2xl border-2",
+                            "h-12 w-12 sm:h-14 sm:w-14 rounded-2xl p-0 flex items-center justify-center transition-all duration-700 shadow-xl border-2 relative overflow-hidden group",
                             canSubmit && !isLoading
-                              ? "bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-600 hover:via-teal-600 hover:to-cyan-600 text-white shadow-emerald-500/30 sm:shadow-emerald-500/40 hover:shadow-emerald-500/50 sm:hover:shadow-emerald-500/60 hover:scale-105 sm:hover:scale-110 border-emerald-400/50 hover:border-emerald-300/70"
+                              ? "bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-600 hover:via-teal-600 hover:to-cyan-600 text-white shadow-emerald-500/40 hover:shadow-emerald-500/60 hover:scale-105 sm:hover:scale-110 border-emerald-400/60 hover:border-emerald-300/80"
                               : "bg-gray-600/50 text-gray-400 cursor-not-allowed border-gray-500/30",
                             animateSubmit && "animate-spin",
                           )}
                           disabled={isLoading || !canSubmit}
                         >
+                          {/* Button shine effect */}
+                          {canSubmit && !isLoading && (
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                          )}
+
                           {isLoading ? (
-                            <div className="animate-spin rounded-full h-5 w-5 sm:h-6 sm:w-6 border-2 border-white border-t-transparent" />
+                            <div className="animate-spin rounded-full h-6 w-6 sm:h-7 sm:w-7 border-2 border-white border-t-transparent" />
                           ) : (
-                            <Send className="h-5 w-5 sm:h-6 sm:w-6" />
+                            <Send className="h-6 w-6 sm:h-7 sm:w-7 relative z-10" />
                           )}
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent className="bg-slate-800 border-white/20">
+                      <TooltipContent className="bg-slate-800 border-white/20 shadow-xl">
                         <p>{!canSubmit ? "Enter a prompt or upload images to generate" : "Generate 3D model"}</p>
                       </TooltipContent>
                     </Tooltip>
