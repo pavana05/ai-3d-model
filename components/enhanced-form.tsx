@@ -374,7 +374,7 @@ export default function EnhancedForm({ isLoading, onSubmit, onOpenOptions }: Enh
               )}
 
               {/* Main input area */}
-              <div className="p-8">
+              <div className="p-8 px-7">
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-start gap-4 sm:gap-6">
                   {/* Action buttons */}
                   <div className="flex flex-row sm:flex-col gap-3 justify-center sm:justify-start">
