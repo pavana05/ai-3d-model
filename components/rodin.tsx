@@ -18,6 +18,10 @@ import {
   Palette,
   Grid3X3,
   Globe,
+  User,
+  LogOut,
+  Save,
+  Folder,
 } from "lucide-react"
 import type { FormValues } from "@/lib/form-schema"
 import { submitRodinJob, checkJobStatus, downloadModel } from "@/lib/api-service"
@@ -25,12 +29,25 @@ import ModelViewer from "./model-viewer"
 import EnhancedForm from "./enhanced-form"
 import StatusIndicator from "./status-indicator"
 import OptionsDialog from "./options-dialog"
+import LoginDialog from "./auth/login-dialog"
+import SavedModelsDialog from "./saved-models-dialog"
 import { Button } from "@/components/ui/button"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Separator } from "@/components/ui/separator"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { useAuth } from "@/contexts/auth-context"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 export default function Rodin() {
   const [isLoading, setIsLoading] = useState(false)
@@ -48,7 +65,13 @@ export default function Rodin() {
   const [isLiked, setIsLiked] = useState(false)
   const [showInfo, setShowInfo] = useState(false)
   const [backgroundEffect, setBackgroundEffect] = useState(0)
+  const [showLoginDialog, setShowLoginDialog] = useState(false)
+  const [showSavedModels, setShowSavedModels] = useState(false)
+  const [showSaveDialog, setShowSaveDialog] = useState(false)
+  const [saveModelName, setSaveModelName] = useState("")
   const isMobile = useMediaQuery("(max-width: 768px)")
+
+  const { user, logout, saveModel } = useAuth()
 
   // Enhanced background animation
   useEffect(() => {
@@ -138,11 +161,33 @@ export default function Rodin() {
               )
 
               if (glbFile) {
+                console.log("Found GLB file:", glbFile)
+
+                // Use proxy URL directly
                 const proxyUrl = `/api/proxy-download?url=${encodeURIComponent(glbFile.url)}`
-                setModelUrl(proxyUrl)
-                setDownloadUrl(glbFile.url)
-                setIsLoading(false)
-                setShowPromptContainer(false)
+                console.log("Using proxy URL:", proxyUrl)
+
+                // Test the proxy URL before setting it
+                try {
+                  const testResponse = await fetch(proxyUrl, { method: "HEAD" })
+                  if (testResponse.ok) {
+                    console.log("Proxy URL is accessible")
+                    setModelUrl(proxyUrl)
+                    setDownloadUrl(glbFile.url)
+                    setIsLoading(false)
+                    setShowPromptContainer(false)
+                  } else {
+                    throw new Error(`Proxy returned ${testResponse.status}`)
+                  }
+                } catch (proxyError) {
+                  console.error("Proxy test failed:", proxyError)
+                  // Try direct URL as fallback
+                  console.log("Trying direct URL as fallback")
+                  setModelUrl(glbFile.url)
+                  setDownloadUrl(glbFile.url)
+                  setIsLoading(false)
+                  setShowPromptContainer(false)
+                }
               } else {
                 setError("No GLB file found in the results")
                 setIsLoading(false)
@@ -152,6 +197,7 @@ export default function Rodin() {
               setIsLoading(false)
             }
           } catch (downloadErr) {
+            console.error("Download error:", downloadErr)
             setError(
               `Failed to download model: ${downloadErr instanceof Error ? downloadErr.message : "Unknown error"}`,
             )
@@ -160,12 +206,14 @@ export default function Rodin() {
         }, 1000)
       } else if (anyJobFailed) {
         setIsPolling(false)
-        setError("Generation task failed")
+        const failedJob = data.jobs.find((job: any) => job.status === "Failed")
+        setError(`Generation task failed${failedJob?.error ? `: ${failedJob.error}` : ""}`)
         setIsLoading(false)
       } else {
         setTimeout(() => handleStatusCheck(subscriptionKey, taskUuid), 2000)
       }
     } catch (err) {
+      console.error("Status check error:", err)
       setError(err instanceof Error ? err.message : "Failed to check status")
       setIsPolling(false)
       setIsLoading(false)
@@ -216,6 +264,7 @@ export default function Rodin() {
         setIsLoading(false)
       }
     } catch (err) {
+      console.error("Submit error:", err)
       setError(err instanceof Error ? err.message : "An unknown error occurred")
       setIsLoading(false)
     }
@@ -225,6 +274,46 @@ export default function Rodin() {
     if (downloadUrl) {
       window.open(downloadUrl, "_blank")
     }
+  }
+
+  const handleSaveModel = async () => {
+    if (!user) {
+      setShowLoginDialog(true)
+      return
+    }
+
+    if (!modelUrl || !currentPrompt) {
+      setError("No model to save")
+      return
+    }
+
+    setShowSaveDialog(true)
+  }
+
+  const handleSaveConfirm = async () => {
+    if (!saveModelName.trim()) {
+      return
+    }
+
+    const result = await saveModel({
+      name: saveModelName.trim(),
+      prompt: currentPrompt,
+      modelUrl: modelUrl!,
+    })
+
+    if (result.success) {
+      setShowSaveDialog(false)
+      setSaveModelName("")
+      // Show success message or toast
+    } else {
+      setError(result.error || "Failed to save model")
+    }
+  }
+
+  const handleLoadModel = (url: string, prompt: string) => {
+    setModelUrl(url)
+    setCurrentPrompt(prompt)
+    setShowPromptContainer(false)
   }
 
   const handleShare = async () => {
@@ -323,6 +412,45 @@ export default function Rodin() {
                   <ExternalLinks />
                   <Separator orientation="vertical" className="h-6 bg-white/20" />
                   <div className="flex items-center gap-2">
+                    {user ? (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg flex items-center gap-2 px-3"
+                          >
+                            <div className="w-6 h-6 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
+                              <User className="h-3 w-3 text-white" />
+                            </div>
+                            <span className="text-sm">{user.name}</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="bg-slate-900/95 border-white/20 backdrop-blur-xl">
+                          <DropdownMenuItem
+                            onClick={() => setShowSavedModels(true)}
+                            className="text-white hover:bg-white/10"
+                          >
+                            <Folder className="h-4 w-4 mr-2" />
+                            My Models
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator className="bg-white/20" />
+                          <DropdownMenuItem onClick={logout} className="text-red-400 hover:bg-red-500/10">
+                            <LogOut className="h-4 w-4 mr-2" />
+                            Sign Out
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    ) : (
+                      <Button
+                        onClick={() => setShowLoginDialog(true)}
+                        variant="ghost"
+                        className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg flex items-center gap-2"
+                      >
+                        <User className="h-4 w-4" />
+                        <span>Sign In</span>
+                      </Button>
+                    )}
+
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
@@ -361,7 +489,55 @@ export default function Rodin() {
                 <div className="space-y-4">
                   <ExternalLinks />
                   <Separator className="bg-white/10" />
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-col gap-2">
+                    {user ? (
+                      <>
+                        <div className="flex items-center gap-2 text-white/80 px-2">
+                          <div className="w-6 h-6 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
+                            <User className="h-3 w-3 text-white" />
+                          </div>
+                          <span className="text-sm">{user.name}</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setShowSavedModels(true)
+                            setShowMobileMenu(false)
+                          }}
+                          className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg flex items-center gap-2 justify-start"
+                        >
+                          <Folder className="h-4 w-4" />
+                          My Models
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            logout()
+                            setShowMobileMenu(false)
+                          }}
+                          className="text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg flex items-center gap-2 justify-start"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          Sign Out
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setShowLoginDialog(true)
+                          setShowMobileMenu(false)
+                        }}
+                        className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg flex items-center gap-2 justify-start"
+                      >
+                        <User className="h-4 w-4" />
+                        Sign In
+                      </Button>
+                    )}
+
                     <Button
                       variant="ghost"
                       size="sm"
@@ -369,7 +545,7 @@ export default function Rodin() {
                         setShowInfo(!showInfo)
                         setShowMobileMenu(false)
                       }}
-                      className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg flex items-center gap-2"
+                      className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg flex items-center gap-2 justify-start"
                     >
                       <Info className="h-4 w-4" />
                       About
@@ -410,6 +586,21 @@ export default function Rodin() {
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>{isLiked ? "Unlike" : "Like"} this model</p>
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={handleSaveModel}
+                      size="icon"
+                      className="rounded-xl bg-black/60 backdrop-blur-xl border border-white/20 hover:bg-black/80 text-white transition-all duration-300"
+                    >
+                      <Save className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Save this model</p>
                   </TooltipContent>
                 </Tooltip>
 
@@ -497,6 +688,16 @@ export default function Rodin() {
                       <Download className="h-5 w-5" />
                       <span>Download Model</span>
                     </Button>
+
+                    {user && (
+                      <Button
+                        onClick={handleSaveModel}
+                        className="w-full sm:w-auto bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl px-6 py-3 flex items-center justify-center gap-3 font-medium shadow-lg hover:shadow-green-500/25 transition-all duration-300 hover:scale-105"
+                      >
+                        <Save className="h-5 w-5" />
+                        <span>Save Model</span>
+                      </Button>
+                    )}
                   </div>
 
                   {/* Model statistics */}
@@ -565,7 +766,7 @@ export default function Rodin() {
                           </div>
                           <h3 className="text-white font-semibold text-lg">AI-Powered Generation</h3>
                         </div>
-                        <p className="text-gray-300 text-sm leading-relaxed">
+                        <p className="text-gray-300 text-sm leading-relaxed font-bold">
                           Advanced neural networks create high-quality 3D models from your images and descriptions with
                           unprecedented accuracy.
                         </p>
@@ -580,7 +781,7 @@ export default function Rodin() {
                           </div>
                           <h3 className="text-white font-semibold text-lg">Multiple Formats</h3>
                         </div>
-                        <p className="text-gray-300 text-sm leading-relaxed">
+                        <p className="text-gray-300 text-sm leading-relaxed font-bold">
                           Export in GLB, USDZ, FBX, OBJ, and STL formats for any platform, game engine, or 3D printing
                           application.
                         </p>
@@ -595,7 +796,7 @@ export default function Rodin() {
                           </div>
                           <h3 className="text-white font-semibold text-lg">Professional Quality</h3>
                         </div>
-                        <p className="text-gray-300 text-sm leading-relaxed">
+                        <p className="text-gray-300 text-sm leading-relaxed font-bold">
                           High-resolution textures, optimized geometry, and realistic materials ready for production
                           use.
                         </p>
@@ -610,7 +811,7 @@ export default function Rodin() {
                           </div>
                           <h3 className="text-white font-semibold text-lg">Lightning Fast</h3>
                         </div>
-                        <p className="text-gray-300 text-sm leading-relaxed">
+                        <p className="text-gray-300 text-sm leading-relaxed font-bold">
                           Generate complex 3D models in minutes, not hours. Our optimized AI pipeline ensures rapid
                           processing.
                         </p>
@@ -625,7 +826,7 @@ export default function Rodin() {
                           </div>
                           <h3 className="text-white font-semibold text-lg">Real-time Preview</h3>
                         </div>
-                        <p className="text-gray-300 text-sm leading-relaxed">
+                        <p className="text-gray-300 text-sm leading-relaxed font-bold">
                           Interactive 3D viewer with real-time rendering, allowing you to inspect your model from every
                           angle.
                         </p>
@@ -640,7 +841,7 @@ export default function Rodin() {
                           </div>
                           <h3 className="text-white font-semibold text-lg">Advanced Options</h3>
                         </div>
-                        <p className="text-gray-300 text-sm leading-relaxed">
+                        <p className="text-gray-300 text-sm leading-relaxed font-bold">
                           Fine-tune every aspect of your model with professional-grade controls and AI-powered
                           recommendations.
                         </p>
@@ -686,6 +887,53 @@ export default function Rodin() {
           images={currentImages}
         />
 
+        {/* Login dialog */}
+        <LoginDialog open={showLoginDialog} onOpenChange={setShowLoginDialog} />
+
+        {/* Saved models dialog */}
+        <SavedModelsDialog open={showSavedModels} onOpenChange={setShowSavedModels} onLoadModel={handleLoadModel} />
+
+        {/* Save model dialog */}
+        <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
+          <DialogContent className="sm:max-w-md bg-gradient-to-br from-slate-900/95 via-gray-900/95 to-slate-800/95 backdrop-blur-xl border-white/20 shadow-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold bg-gradient-to-r from-white via-blue-200 to-purple-200 bg-clip-text text-transparent">
+                Save 3D Model
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="model-name" className="text-white font-medium">
+                  Model Name
+                </Label>
+                <Input
+                  id="model-name"
+                  placeholder="Enter a name for your model"
+                  value={saveModelName}
+                  onChange={(e) => setSaveModelName(e.target.value)}
+                  className="bg-slate-700/50 border-slate-600 text-white placeholder:text-gray-400 focus:border-blue-500 focus:ring-blue-500/20"
+                />
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  onClick={() => setShowSaveDialog(false)}
+                  variant="outline"
+                  className="flex-1 bg-slate-700/50 border-slate-600 text-gray-300 hover:bg-slate-600/50 hover:text-white"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSaveConfirm}
+                  disabled={!saveModelName.trim()}
+                  className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white"
+                >
+                  Save Model
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         {/* Info modal */}
         {showInfo && (
           <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
@@ -708,8 +956,8 @@ export default function Rodin() {
                     images and text descriptions.
                   </p>
                   <p>
-                    Features include multiple export formats, real-time preview, and professional-grade quality
-                    settings.
+                    Features include multiple export formats, real-time preview, professional-grade quality settings,
+                    and user accounts to save your creations.
                   </p>
                   <p>Built with love by Pavan.A using Next.js, Three.js, and the Hyper3D Rodin API.</p>
                 </div>

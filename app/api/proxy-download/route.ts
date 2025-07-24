@@ -1,36 +1,90 @@
-import { NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const url = new URL(request.url)
-    const fileUrl = url.searchParams.get("url")
+    const { searchParams } = new URL(request.url)
+    const url = searchParams.get("url")
 
-    if (!fileUrl) {
-      return NextResponse.json({ error: "Missing url parameter" }, { status: 400 })
+    if (!url) {
+      return NextResponse.json({ error: "URL parameter is required" }, { status: 400 })
     }
 
-    // Fetch the file from the original URL
-    const response = await fetch(fileUrl)
+    console.log("Proxying request to:", url)
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; 3D-Model-Proxy/1.0)",
+      },
+    })
 
     if (!response.ok) {
-      return NextResponse.json({ error: `Failed to fetch file: ${response.status}` }, { status: response.status })
+      console.error("Fetch failed:", response.status, response.statusText)
+      return NextResponse.json(
+        { error: `Failed to fetch: ${response.status} ${response.statusText}` },
+        { status: response.status },
+      )
     }
 
-    // Get the file content and content type
-    const fileContent = await response.arrayBuffer()
     const contentType = response.headers.get("content-type") || "application/octet-stream"
+    const buffer = await response.arrayBuffer()
 
-    // Create a new response with the file content and appropriate headers
-    return new NextResponse(fileContent, {
+    console.log("Successfully proxied file:", {
+      size: buffer.byteLength,
+      contentType,
+      url: url.substring(0, 100) + "...",
+    })
+
+    return new NextResponse(buffer, {
+      status: 200,
       headers: {
         "Content-Type": contentType,
-        "Content-Disposition": `attachment; filename="${fileUrl.split("/").pop()}"`,
         "Access-Control-Allow-Origin": "*",
-        "Cache-Control": "no-cache",
+        "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Cache-Control": "public, max-age=3600",
       },
     })
   } catch (error) {
-    console.error("Error in proxy download route:", error)
-    return NextResponse.json({ error: "Failed to proxy download" }, { status: 500 })
+    console.error("Proxy error:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
+}
+
+export async function HEAD(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const url = searchParams.get("url")
+
+    if (!url) {
+      return new NextResponse(null, { status: 400 })
+    }
+
+    const response = await fetch(url, { method: "HEAD" })
+
+    return new NextResponse(null, {
+      status: response.status,
+      headers: {
+        "Content-Type": response.headers.get("content-type") || "application/octet-stream",
+        "Content-Length": response.headers.get("content-length") || "0",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+      },
+    })
+  } catch (error) {
+    console.error("HEAD request error:", error)
+    return new NextResponse(null, { status: 500 })
+  }
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+    },
+  })
 }
