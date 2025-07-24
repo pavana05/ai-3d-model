@@ -7,13 +7,13 @@ import { useForm } from "react-hook-form"
 import type * as z from "zod"
 import { Form as UIForm } from "@/components/ui/form"
 import { Button } from "@/components/ui/button"
-import { Settings2, Send, X, CloudUpload, Sparkles, Zap, Camera, Palette, Layers3 } from "lucide-react"
+import { Settings2, Send, X, CloudUpload, Sparkles, Zap, Camera, Palette, Layers3, Plus, ImageIcon } from "lucide-react"
 import AutoResizeTextarea from "./auto-resize-textarea"
-import ImageUploadArea from "./image-upload-area"
 import { formSchema } from "@/lib/form-schema"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { cn } from "@/lib/utils"
 import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import EnhancedProgressBar from "./enhanced-progress-bar"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
@@ -303,7 +303,85 @@ export default function EnhancedForm({ isLoading, onSubmit, onOpenOptions }: Enh
               )}
 
               {/* Image previews */}
-              <ImageUploadArea previewUrls={previewUrls} onRemoveImage={removeImage} isLoading={isLoading} />
+              {hasImages && (
+                <div className="p-6 border-b border-white/10 bg-gradient-to-r from-slate-800/50 to-gray-800/50">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600">
+                      <ImageIcon className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white">Uploaded Images</h3>
+                      <p className="text-sm text-gray-400">Ready for 3D generation</p>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className="ml-auto bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-emerald-300 border-emerald-500/30"
+                    >
+                      {previewUrls.length}/5 Images
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                    {previewUrls.map((url, index) => (
+                      <div
+                        key={index}
+                        className="relative group animate-in zoom-in duration-500"
+                        style={{ animationDelay: `${index * 100}ms` }}
+                      >
+                        <div className="relative aspect-square rounded-2xl overflow-hidden border-2 border-white/20 shadow-xl transition-all duration-500 group-hover:scale-110 group-hover:shadow-2xl group-hover:border-violet-400/60 group-hover:rotate-1">
+                          <img
+                            src={url || "/placeholder.svg"}
+                            alt={`Preview ${index + 1}`}
+                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                            onError={() => {
+                              console.error(`Failed to load image preview ${index + 1}`)
+                              removeImage(index)
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500" />
+                          <div className="absolute inset-0 bg-gradient-to-br from-violet-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-all duration-500" />
+                          {!isLoading && !isUploading && (
+                            <button
+                              type="button"
+                              onClick={() => removeImage(index)}
+                              className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-all duration-500 shadow-lg hover:scale-110 z-10 border border-white/20"
+                              aria-label={`Remove image ${index + 1}`}
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          )}
+                        </div>
+                        <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2">
+                          <Badge
+                            variant="secondary"
+                            className="text-xs bg-gradient-to-r from-slate-800 to-gray-800 text-white border border-white/30 backdrop-blur-sm shadow-lg"
+                          >
+                            #{index + 1}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Add more images button */}
+                    {previewUrls.length < 5 && (
+                      <button
+                        type="button"
+                        onClick={triggerFileInput}
+                        disabled={isLoading || isUploading}
+                        className="aspect-square rounded-2xl border-2 border-dashed border-violet-400/40 hover:border-violet-400/80 bg-gradient-to-br from-violet-500/5 to-purple-500/5 hover:from-violet-500/10 hover:to-purple-500/10 transition-all duration-500 flex items-center justify-center group hover:scale-105"
+                      >
+                        <div className="text-center">
+                          <div className="p-3 rounded-full bg-gradient-to-r from-violet-500/20 to-purple-500/20 group-hover:from-violet-500/30 group-hover:to-purple-500/30 transition-all duration-300 mb-2">
+                            <Plus className="h-6 w-6 text-violet-400 group-hover:text-violet-300 transition-colors" />
+                          </div>
+                          <span className="text-xs text-violet-400 group-hover:text-violet-300 font-medium transition-colors">
+                            Add Image
+                          </span>
+                        </div>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Main input area */}
               <div className="p-8 px-7">

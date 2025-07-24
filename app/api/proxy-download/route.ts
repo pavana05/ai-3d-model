@@ -32,7 +32,6 @@ export async function GET(request: NextRequest) {
     console.log("Successfully proxied file:", {
       size: buffer.byteLength,
       contentType,
-      url: url.substring(0, 100) + "...",
     })
 
     return new NextResponse(buffer, {
@@ -60,7 +59,12 @@ export async function HEAD(request: NextRequest) {
       return new NextResponse(null, { status: 400 })
     }
 
-    const response = await fetch(url, { method: "HEAD" })
+    const response = await fetch(url, {
+      method: "HEAD",
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; 3D-Model-Proxy/1.0)",
+      },
+    })
 
     return new NextResponse(null, {
       status: response.status,
@@ -73,7 +77,7 @@ export async function HEAD(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error("HEAD request error:", error)
+    console.error("Proxy HEAD error:", error)
     return new NextResponse(null, { status: 500 })
   }
 }

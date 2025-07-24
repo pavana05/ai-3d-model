@@ -1,142 +1,162 @@
 "use client"
 
-import { Suspense, useEffect, useState, useRef } from "react"
-import { Canvas } from "@react-three/fiber"
-import { OrbitControls, Environment } from "@react-three/drei"
-import * as THREE from "three"
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
+import { useEffect, useState, useRef } from "react"
+import { useThree, useFrame } from "@react-three/fiber"
+import { useGLTF, Center } from "@react-three/drei"
+import { Box3, Vector3, type Group, type Mesh, Object3D } from "three"
 import LoadingSpinner from "./loading-spinner"
 
-interface ModelComponentProps {
-  modelUrl?: string
-  className?: string
-}
-
-function Model({ url }: { url: string }) {
-  const [gltf, setGltf] = useState<THREE.Group | null>(null)
-  const [error, setError] = useState<string | null>(null)
+export default function ModelComponent({ url }: { url: string }) {
   const [isLoading, setIsLoading] = useState(true)
-  const mountedRef = useRef(true)
+  const [error, setError] = useState<string | null>(null)
+  const { camera } = useThree()
+  const groupRef = useRef<Group>(null)
+
+  // Load GLTF with error handling
+  const gltf = useGLTF(url, undefined, undefined, (loadError) => {
+    console.error("GLTF Loading Error:", loadError)
+    setError("Failed to load 3D model")
+    setIsLoading(false)
+  })
+
+  const shouldLoad = url && url.trim() !== "" && (url.startsWith("http") || url.startsWith("/"))
 
   useEffect(() => {
-    if (!url) return
+    if (!shouldLoad) {
+      setError("Invalid model URL")
+      setIsLoading(false)
+      return
+    }
 
-    const loadModel = async () => {
-      try {
-        setIsLoading(true)
-        setError(null)
+    // Reset states when URL changes
+    setIsLoading(true)
+    setError(null)
+  }, [url, shouldLoad])
 
-        // Create a new GLTFLoader instance
-        const loader = new GLTFLoader()
+  useEffect(() => {
+    if (!gltf) return
 
-        // Load the GLTF model
-        const result = await new Promise<any>((resolve, reject) => {
-          loader.load(
-            url,
-            (gltf) => resolve(gltf),
-            (progress) => {
-              console.log("Loading progress:", (progress.loaded / progress.total) * 100 + "%")
-            },
-            (error) => reject(error),
-          )
-        })
+    try {
+      if (gltf.scene) {
+        console.log("GLTF loaded successfully")
 
-        if (!mountedRef.current) return
+        // More comprehensive geometry check
+        let meshCount = 0
+        let geometryCount = 0
+        let totalVertices = 0
 
-        if (result && result.scene) {
-          // Clone the scene to avoid issues with multiple instances
-          const scene = result.scene.clone()
+        const traverseAndCount = (object: Object3D) => {
+          if (object instanceof Object3D) {
+            // Check if it's a mesh
+            if ((object as any).isMesh) {
+              meshCount++
+              const mesh = object as Mesh
+              if (mesh.geometry) {
+                geometryCount++
+                const positionAttribute = mesh.geometry.attributes.position
+                if (positionAttribute) {
+                  totalVertices += positionAttribute.count
+                }
+              }
+            }
 
-          // Calculate bounding box for proper positioning
-          const box = new THREE.Box3().setFromObject(scene)
-          const center = box.getCenter(new THREE.Vector3())
-          const size = box.getSize(new THREE.Vector3())
-
-          // Center the model
-          scene.position.sub(center)
-
-          // Scale the model to fit in a reasonable size
-          const maxDimension = Math.max(size.x, size.y, size.z)
-          if (maxDimension > 0) {
-            const scale = 2 / maxDimension
-            scene.scale.setScalar(scale)
+            // Recursively check children
+            object.children.forEach(traverseAndCount)
           }
+        }
 
-          setGltf(scene)
-        } else {
-          throw new Error("Invalid GLTF structure")
+        traverseAndCount(gltf.scene)
+
+        // Calculate bounding box with fallback
+        let box: Box3
+        let center: Vector3
+        let size: Vector3
+        let maxDim: number
+
+        try {
+          box = new Box3().setFromObject(gltf.scene)
+          center = box.getCenter(new Vector3())
+          size = box.getSize(new Vector3())
+          maxDim = Math.max(size.x, size.y, size.z)
+
+          // If bounding box is invalid, use default values
+          if (!isFinite(maxDim) || maxDim === 0) {
+            console.warn("Invalid bounding box, using default scale")
+            maxDim = 2
+          }
+        } catch (boxError) {
+          console.warn("Failed to calculate bounding box, using defaults:", boxError)
+          maxDim = 2
         }
-      } catch (err) {
-        console.error("Model loading error:", err)
-        if (mountedRef.current) {
-          setError(err instanceof Error ? err.message : "Failed to load 3D model")
-        }
-      } finally {
-        if (mountedRef.current) {
-          setIsLoading(false)
-        }
+
+        // Reset camera position for optimal viewing
+        const distance = maxDim > 0 ? Math.max(4, maxDim * 1.5) : 5
+        camera.position.set(0, 0, distance)
+        camera.lookAt(0, 0, 0)
+        camera.updateProjectionMatrix()
+
+        setError(null)
+        setIsLoading(false)
+      } else {
+        console.error("GLTF scene is null or undefined")
+        setError("Model loaded but scene is empty")
+        setIsLoading(false)
       }
+    } catch (err) {
+      console.error("Error processing model:", err)
+      setError(`Error processing the 3D model: ${err instanceof Error ? err.message : "Unknown error"}`)
+      setIsLoading(false)
     }
+  }, [gltf, camera, url])
 
-    loadModel()
-
-    return () => {
-      mountedRef.current = false
+  // Auto-rotate the model for better presentation
+  useFrame((state) => {
+    if (groupRef.current && !isLoading && !error && gltf?.scene) {
+      groupRef.current.rotation.y = state.clock.elapsedTime * 0.2
     }
-  }, [url])
+  })
 
-  useEffect(() => {
-    return () => {
-      mountedRef.current = false
-    }
-  }, [])
+  if (error) {
+    return (
+      <Center>
+        <group>
+          {/* Error indicator cube */}
+          <mesh>
+            <boxGeometry args={[2, 2, 2]} />
+            <meshStandardMaterial color="#ff6b6b" />
+          </mesh>
+          {/* Error text plane */}
+          <group position={[0, -2.5, 0]}>
+            <mesh>
+              <planeGeometry args={[6, 1.5]} />
+              <meshBasicMaterial color="#ffffff" transparent opacity={0.9} />
+            </mesh>
+          </group>
+        </group>
+      </Center>
+    )
+  }
 
   if (isLoading) {
     return <LoadingSpinner />
   }
 
-  if (error) {
+  if (!gltf?.scene) {
     return (
-      <mesh>
-        <boxGeometry args={[1, 1, 1]} />
-        <meshStandardMaterial color="red" />
-      </mesh>
-    )
-  }
-
-  if (!gltf) {
-    return null
-  }
-
-  return <primitive object={gltf} />
-}
-
-export default function ModelComponent({ modelUrl, className }: ModelComponentProps) {
-  if (!modelUrl) {
-    return (
-      <div className={`flex items-center justify-center h-full ${className || ""}`}>
-        <div className="text-center text-gray-500">
-          <div className="text-4xl mb-2">📦</div>
-          <p>No model to display</p>
-        </div>
-      </div>
+      <Center>
+        <mesh>
+          <boxGeometry args={[1, 1, 1]} />
+          <meshStandardMaterial color="#cccccc" />
+        </mesh>
+      </Center>
     )
   }
 
   return (
-    <div className={`w-full h-full ${className || ""}`}>
-      <Canvas camera={{ position: [0, 0, 5], fov: 50 }} style={{ background: "transparent" }}>
-        <ambientLight intensity={0.5} />
-        <directionalLight position={[10, 10, 5]} intensity={1} />
-        <directionalLight position={[-10, -10, -5]} intensity={0.5} />
-
-        <Suspense fallback={<LoadingSpinner />}>
-          <Model url={modelUrl} />
-          <Environment preset="studio" />
-        </Suspense>
-
-        <OrbitControls enablePan={true} enableZoom={true} enableRotate={true} minDistance={1} maxDistance={10} />
-      </Canvas>
-    </div>
+    <Center position={[0, 0, 0]}>
+      <group ref={groupRef}>
+        <primitive object={gltf.scene} scale={1.5} position={[0, 0, 0]} />
+      </group>
+    </Center>
   )
 }
