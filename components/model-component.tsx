@@ -2,11 +2,11 @@
 
 import { useEffect, useState, useRef } from "react"
 import { useThree, useFrame } from "@react-three/fiber"
-import { useGLTF, Center } from "@react-three/drei"
+import { useGLTF, Center, Html } from "@react-three/drei" // Corrected import for Html
 import { Box3, Vector3, type Group, type Mesh, Object3D } from "three"
 import LoadingSpinner from "./loading-spinner"
 
-export default function ModelComponent({ url }: { url: string }) {
+export default function ModelComponent({ url }: { url: string | null }) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { camera } = useThree()
@@ -14,27 +14,50 @@ export default function ModelComponent({ url }: { url: string }) {
 
   // Load GLTF with error handling
   const gltf = useGLTF(url, undefined, undefined, (loadError) => {
-    console.error("GLTF Loading Error:", loadError)
-    setError("Failed to load 3D model")
+    console.error("GLTF Loading Error (raw):", loadError) // Log the raw error for debugging
+    let errorMessage = "Failed to load 3D model. Please check the URL or try again."
+
+    // Attempt to extract a more specific message if available
+    if (loadError instanceof Error) {
+      errorMessage = `Failed to load 3D model: ${loadError.message}`
+    } else if (
+      loadError &&
+      typeof loadError === "object" &&
+      "message" in loadError &&
+      typeof loadError.message === "string"
+    ) {
+      errorMessage = `Failed to load 3D model: ${loadError.message}`
+    } else if (typeof loadError === "string") {
+      errorMessage = `Failed to load 3D model: ${loadError}`
+    } else if (loadError && typeof loadError === "object" && "type" in loadError && loadError.type === "error") {
+      // This might be a ProgressEvent for network errors
+      errorMessage = `Failed to load 3D model: Network or file access error. (Status: ${loadError.status || "unknown"})`
+    } else {
+      // Fallback for the unusual manager object error or other unknown errors
+      errorMessage = `Failed to load 3D model. An unexpected error occurred during loading. Please ensure the URL is correct and the file is a valid GLB. (Details: ${JSON.stringify(loadError)})`
+    }
+
+    setError(errorMessage)
     setIsLoading(false)
   })
 
-  const shouldLoad = url && url.trim() !== "" && (url.startsWith("http") || url.startsWith("/"))
-
   useEffect(() => {
-    if (!shouldLoad) {
-      setError("Invalid model URL")
+    // Defensive check for invalid URL before attempting to load
+    if (!url || url.trim() === "") {
+      setError("Invalid model URL provided. Please ensure a valid GLB URL is generated.")
       setIsLoading(false)
       return
     }
 
-    // Reset states when URL changes
-    setIsLoading(true)
-    setError(null)
-  }, [url, shouldLoad])
+    // If gltf is null, and no error has been set yet (e.g., by the initial URL check),
+    // it means useGLTF didn't return a model, likely due to an internal loading issue.
+    if (!gltf && !error && url && url.trim() !== "") {
+      setError("Model loading failed or returned an empty scene. Check console for details.")
+      setIsLoading(false)
+      return
+    }
 
-  useEffect(() => {
-    if (!gltf) return
+    if (!gltf) return // Exit if gltf is still null (e.g., if url was initially invalid)
 
     try {
       if (gltf.scene) {
@@ -99,15 +122,15 @@ export default function ModelComponent({ url }: { url: string }) {
         setIsLoading(false)
       } else {
         console.error("GLTF scene is null or undefined")
-        setError("Model loaded but scene is empty")
+        setError("Model loaded but scene is empty or invalid.")
         setIsLoading(false)
       }
     } catch (err) {
-      console.error("Error processing model:", err)
+      console.error("Error processing model after load:", err)
       setError(`Error processing the 3D model: ${err instanceof Error ? err.message : "Unknown error"}`)
       setIsLoading(false)
     }
-  }, [gltf, camera, url])
+  }, [gltf, camera, url, error]) // Add error to dependency array to prevent infinite loop if error is set inside
 
   // Auto-rotate the model for better presentation
   useFrame((state) => {
@@ -131,6 +154,12 @@ export default function ModelComponent({ url }: { url: string }) {
               <planeGeometry args={[6, 1.5]} />
               <meshBasicMaterial color="#ffffff" transparent opacity={0.9} />
             </mesh>
+            {/* Display the error message using Html */}
+            <Html position={[0, 0, 0.1]} center>
+              <div className="w-[300px] p-2 text-center text-sm text-red-600 bg-white rounded-md shadow-lg">
+                {error}
+              </div>
+            </Html>
           </group>
         </group>
       </Center>
@@ -142,6 +171,9 @@ export default function ModelComponent({ url }: { url: string }) {
   }
 
   if (!gltf?.scene) {
+    // This case should ideally be caught by the error state if url is invalid
+    // or by the loading spinner if it's still fetching.
+    // This fallback is for unexpected scenarios where gltf is null but no error is set.
     return (
       <Center>
         <mesh>

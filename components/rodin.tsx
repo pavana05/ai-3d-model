@@ -48,6 +48,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useToast } from "@/hooks/use-toast"
 
 export default function Rodin() {
   const [isLoading, setIsLoading] = useState(false)
@@ -69,9 +70,11 @@ export default function Rodin() {
   const [showSavedModels, setShowSavedModels] = useState(false)
   const [showSaveDialog, setShowSaveDialog] = useState(false)
   const [saveModelName, setSaveModelName] = useState("")
+  const [isSaving, setIsSaving] = useState(false)
   const isMobile = useMediaQuery("(max-width: 768px)")
 
   const { user, logout, saveModel } = useAuth()
+  const { toast } = useToast()
 
   // Enhanced background animation
   useEffect(() => {
@@ -156,6 +159,7 @@ export default function Rodin() {
             }
 
             if (downloadData.list && downloadData.list.length > 0) {
+              console.log("Files available for download:", downloadData.list) // Log all files
               const glbFile = downloadData.list.find((file: { name: string }) =>
                 file.name.toLowerCase().endsWith(".glb"),
               )
@@ -189,7 +193,8 @@ export default function Rodin() {
                   setShowPromptContainer(false)
                 }
               } else {
-                setError("No GLB file found in the results")
+                console.error("No GLB file found in the results. Available files:", downloadData.list) // Log available files
+                setError("No GLB file found in the results. Please check the console for details.")
                 setIsLoading(false)
               }
             } else {
@@ -283,30 +288,71 @@ export default function Rodin() {
     }
 
     if (!modelUrl || !currentPrompt) {
-      setError("No model to save")
+      toast({
+        title: "Cannot Save Model",
+        description: "No model available to save. Please generate a model first.",
+        variant: "destructive",
+      })
       return
     }
 
+    // Auto-generate a name if none provided
+    const defaultName = `3D Model - ${new Date().toLocaleDateString()}`
+    setSaveModelName(defaultName)
     setShowSaveDialog(true)
   }
 
   const handleSaveConfirm = async () => {
     if (!saveModelName.trim()) {
+      toast({
+        title: "Model Name Required",
+        description: "Please enter a name for your model.",
+        variant: "destructive",
+      })
       return
     }
 
-    const result = await saveModel({
-      name: saveModelName.trim(),
-      prompt: currentPrompt,
-      modelUrl: modelUrl!,
-    })
+    if (!modelUrl || !currentPrompt) {
+      toast({
+        title: "Save Failed",
+        description: "No model data available to save.",
+        variant: "destructive",
+      })
+      return
+    }
 
-    if (result.success) {
-      setShowSaveDialog(false)
-      setSaveModelName("")
-      // Show success message or toast
-    } else {
-      setError(result.error || "Failed to save model")
+    setIsSaving(true)
+
+    try {
+      const result = await saveModel({
+        name: saveModelName.trim(),
+        prompt: currentPrompt,
+        modelUrl: modelUrl,
+      })
+
+      if (result.success) {
+        setShowSaveDialog(false)
+        setSaveModelName("")
+        toast({
+          title: "Model Saved Successfully!",
+          description: `"${saveModelName.trim()}" has been saved to your profile.`,
+        })
+      } else {
+        toast({
+          title: "Save Failed",
+          description: result.error || "Failed to save model. Please try again.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Save model error:", error)
+      toast({
+        title: "Save Failed",
+        description: "An unexpected error occurred while saving the model.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -314,6 +360,10 @@ export default function Rodin() {
     setModelUrl(url)
     setCurrentPrompt(prompt)
     setShowPromptContainer(false)
+    toast({
+      title: "Model Loaded",
+      description: "Your saved model has been loaded successfully.",
+    })
   }
 
   const handleShare = async () => {
@@ -330,6 +380,10 @@ export default function Rodin() {
     } else {
       // Fallback to clipboard
       navigator.clipboard.writeText(window.location.href)
+      toast({
+        title: "Link Copied",
+        description: "Model link has been copied to your clipboard.",
+      })
     }
   }
 
@@ -386,10 +440,10 @@ export default function Rodin() {
               {/* Logo section */}
               <div className="flex-1">
                 <div className="flex items-center gap-3 sm:gap-4">
-                  <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-r from-blue-500/20 to-purple-500/20 backdrop-blur-sm border border-white/10">
+                  <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-r from-blue-500/20 to-purple-500/20 backdrop-blur-sm border border-white/10 flex-shrink-0">
                     <Grid3X3 className="h-5 w-5 sm:h-6 sm:w-6 text-blue-400" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <h1 className="text-lg sm:text-xl lg:text-2xl text-white font-bold bg-gradient-to-r from-white via-blue-200 to-purple-200 bg-clip-text text-transparent">
                       3D AI Model Generator
                     </h1>
@@ -689,15 +743,13 @@ export default function Rodin() {
                       <span>Download Model</span>
                     </Button>
 
-                    {user && (
-                      <Button
-                        onClick={handleSaveModel}
-                        className="w-full sm:w-auto bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl px-6 py-3 flex items-center justify-center gap-3 font-medium shadow-lg hover:shadow-green-500/25 transition-all duration-300 hover:scale-105"
-                      >
-                        <Save className="h-5 w-5" />
-                        <span>Save Model</span>
-                      </Button>
-                    )}
+                    <Button
+                      onClick={handleSaveModel}
+                      className="w-full sm:w-auto bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl px-6 py-3 flex items-center justify-center gap-3 font-medium shadow-lg hover:shadow-green-500/25 transition-all duration-300 hover:scale-105"
+                    >
+                      <Save className="h-5 w-5" />
+                      <span>{user ? "Save Model" : "Sign In to Save"}</span>
+                    </Button>
                   </div>
 
                   {/* Model statistics */}
@@ -748,102 +800,130 @@ export default function Rodin() {
             {!isLoading && !modelUrl && showPromptContainer && (
               <div className="p-4 sm:p-6 lg:p-8 border-t border-white/10 animate-in slide-in-from-bottom duration-700 delay-200">
                 <div className="max-w-6xl mx-auto">
-                  <div className="text-center mb-8 sm:mb-12">
-                    <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                      Powered by Advanced AI
+                  <div className="text-center mb-12 sm:mb-16">
+                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 mb-6">
+                      <Sparkles className="h-4 w-4 text-blue-400" />
+                      <span className="text-sm font-medium text-blue-300">AI-Powered Technology</span>
+                    </div>
+                    <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6 leading-tight">
+                      Professional 3D Model Generation
                     </h2>
-                    <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-                      Transform your ideas into stunning 3D models with cutting-edge artificial intelligence
+                    <p className="text-gray-300 text-lg sm:text-xl max-w-3xl mx-auto leading-relaxed">
+                      Transform your creative vision into production-ready 3D assets with enterprise-grade AI technology
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <Card className="group bg-gradient-to-br from-blue-900/30 to-purple-900/30 border-blue-500/30 hover:border-blue-400/50 transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/20">
-                      <CardContent className="p-6">
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="p-3 rounded-xl bg-blue-500/20 group-hover:bg-blue-500/30 transition-colors">
-                            <Sparkles className="h-6 w-6 text-blue-400" />
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <Card className="group relative overflow-hidden bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-slate-700/50 hover:border-blue-500/30 transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-blue-500/10">
+                      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                      <CardContent className="p-8 relative z-10">
+                        <div className="flex items-center gap-4 mb-6">
+                          <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-500/20 to-blue-600/20 group-hover:from-blue-500/30 group-hover:to-blue-600/30 transition-all duration-300">
+                            <Sparkles className="h-7 w-7 text-blue-400" />
                           </div>
-                          <h3 className="text-white font-semibold text-lg">AI-Powered Generation</h3>
+                          <div>
+                            <h3 className="text-white font-bold text-xl mb-1">AI-Powered Generation</h3>
+                            <p className="text-blue-400 text-sm font-medium">Neural Networks</p>
+                          </div>
                         </div>
-                        <p className="text-gray-300 text-sm leading-relaxed font-bold">
-                          Advanced neural networks create high-quality 3D models from your images and descriptions with
-                          unprecedented accuracy.
+                        <p className="text-gray-300 text-base leading-relaxed">
+                          Advanced deep learning algorithms analyze your inputs to generate highly detailed 3D models
+                          with unprecedented accuracy and realism.
                         </p>
                       </CardContent>
                     </Card>
 
-                    <Card className="group bg-gradient-to-br from-green-900/30 to-emerald-900/30 border-green-500/30 hover:border-green-400/50 transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:shadow-green-500/20">
-                      <CardContent className="p-6">
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="p-3 rounded-xl bg-green-500/20 group-hover:bg-green-500/30 transition-colors">
-                            <Palette className="h-6 w-6 text-green-400" />
+                    <Card className="group relative overflow-hidden bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-slate-700/50 hover:border-green-500/30 transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-green-500/10">
+                      <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                      <CardContent className="p-8 relative z-10">
+                        <div className="flex items-center gap-4 mb-6">
+                          <div className="p-4 rounded-2xl bg-gradient-to-br from-green-500/20 to-green-600/20 group-hover:from-green-500/30 group-hover:to-green-600/30 transition-all duration-300">
+                            <Palette className="h-7 w-7 text-green-400" />
                           </div>
-                          <h3 className="text-white font-semibold text-lg">Multiple Formats</h3>
+                          <div>
+                            <h3 className="text-white font-bold text-xl mb-1">Multiple Formats</h3>
+                            <p className="text-green-400 text-sm font-medium">Universal Export</p>
+                          </div>
                         </div>
-                        <p className="text-gray-300 text-sm leading-relaxed font-bold">
-                          Export in GLB, USDZ, FBX, OBJ, and STL formats for any platform, game engine, or 3D printing
-                          application.
+                        <p className="text-gray-300 text-base leading-relaxed">
+                          Export in industry-standard formats including GLB, USDZ, FBX, OBJ, and STL for seamless
+                          integration across platforms.
                         </p>
                       </CardContent>
                     </Card>
 
-                    <Card className="group bg-gradient-to-br from-orange-900/30 to-red-900/30 border-orange-500/30 hover:border-orange-400/50 transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:shadow-orange-500/20">
-                      <CardContent className="p-6">
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="p-3 rounded-xl bg-orange-500/20 group-hover:bg-orange-500/30 transition-colors">
-                            <Star className="h-6 w-6 text-orange-400" />
+                    <Card className="group relative overflow-hidden bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-slate-700/50 hover:border-orange-500/30 transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-orange-500/10">
+                      <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                      <CardContent className="p-8 relative z-10">
+                        <div className="flex items-center gap-4 mb-6">
+                          <div className="p-4 rounded-2xl bg-gradient-to-br from-orange-500/20 to-orange-600/20 group-hover:from-orange-500/30 group-hover:to-orange-600/30 transition-all duration-300">
+                            <Star className="h-7 w-7 text-orange-400" />
                           </div>
-                          <h3 className="text-white font-semibold text-lg">Professional Quality</h3>
+                          <div>
+                            <h3 className="text-white font-bold text-xl mb-1">Enterprise Quality</h3>
+                            <p className="text-orange-400 text-sm font-medium">Production Ready</p>
+                          </div>
                         </div>
-                        <p className="text-gray-300 text-sm leading-relaxed font-bold">
-                          High-resolution textures, optimized geometry, and realistic materials ready for production
-                          use.
+                        <p className="text-gray-300 text-base leading-relaxed">
+                          High-resolution textures, optimized geometry, and professional materials suitable for
+                          commercial applications.
                         </p>
                       </CardContent>
                     </Card>
 
-                    <Card className="group bg-gradient-to-br from-purple-900/30 to-pink-900/30 border-purple-500/30 hover:border-purple-400/50 transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/20">
-                      <CardContent className="p-6">
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="p-3 rounded-xl bg-purple-500/20 group-hover:bg-purple-500/30 transition-colors">
-                            <Zap className="h-6 w-6 text-purple-400" />
+                    <Card className="group relative overflow-hidden bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-slate-700/50 hover:border-purple-500/30 transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-purple-500/10">
+                      <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                      <CardContent className="p-8 relative z-10">
+                        <div className="flex items-center gap-4 mb-6">
+                          <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-500/20 to-purple-600/20 group-hover:from-purple-500/30 group-hover:to-purple-600/30 transition-all duration-300">
+                            <Zap className="h-7 w-7 text-purple-400" />
                           </div>
-                          <h3 className="text-white font-semibold text-lg">Lightning Fast</h3>
+                          <div>
+                            <h3 className="text-white font-bold text-xl mb-1">Lightning Fast</h3>
+                            <p className="text-purple-400 text-sm font-medium">Optimized Pipeline</p>
+                          </div>
                         </div>
-                        <p className="text-gray-300 text-sm leading-relaxed font-bold">
-                          Generate complex 3D models in minutes, not hours. Our optimized AI pipeline ensures rapid
-                          processing.
+                        <p className="text-gray-300 text-base leading-relaxed">
+                          Generate complex 3D models in minutes with our optimized AI infrastructure and advanced
+                          processing algorithms.
                         </p>
                       </CardContent>
                     </Card>
 
-                    <Card className="group bg-gradient-to-br from-cyan-900/30 to-blue-900/30 border-cyan-500/30 hover:border-cyan-400/50 transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:shadow-cyan-500/20">
-                      <CardContent className="p-6">
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="p-3 rounded-xl bg-cyan-500/20 group-hover:bg-cyan-500/30 transition-colors">
-                            <Eye className="h-6 w-6 text-cyan-400" />
+                    <Card className="group relative overflow-hidden bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-slate-700/50 hover:border-cyan-500/30 transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-cyan-500/10">
+                      <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                      <CardContent className="p-8 relative z-10">
+                        <div className="flex items-center gap-4 mb-6">
+                          <div className="p-4 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-cyan-600/20 group-hover:from-cyan-500/30 group-hover:to-cyan-600/30 transition-all duration-300">
+                            <Eye className="h-7 w-7 text-cyan-400" />
                           </div>
-                          <h3 className="text-white font-semibold text-lg">Real-time Preview</h3>
+                          <div>
+                            <h3 className="text-white font-bold text-xl mb-1">Real-time Preview</h3>
+                            <p className="text-cyan-400 text-sm font-medium">Interactive Viewer</p>
+                          </div>
                         </div>
-                        <p className="text-gray-300 text-sm leading-relaxed font-bold">
-                          Interactive 3D viewer with real-time rendering, allowing you to inspect your model from every
-                          angle.
+                        <p className="text-gray-300 text-base leading-relaxed">
+                          Inspect your models with our advanced 3D viewer featuring real-time rendering and
+                          comprehensive controls.
                         </p>
                       </CardContent>
                     </Card>
 
-                    <Card className="group bg-gradient-to-br from-teal-900/30 to-green-900/30 border-teal-500/30 hover:border-teal-400/50 transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:shadow-teal-500/20">
-                      <CardContent className="p-6">
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="p-3 rounded-xl bg-teal-500/20 group-hover:bg-teal-500/30 transition-colors">
-                            <Settings className="h-6 w-6 text-teal-400" />
+                    <Card className="group relative overflow-hidden bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-slate-700/50 hover:border-teal-500/30 transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-teal-500/10">
+                      <div className="absolute inset-0 bg-gradient-to-br from-teal-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                      <CardContent className="p-8 relative z-10">
+                        <div className="flex items-center gap-4 mb-6">
+                          <div className="p-4 rounded-2xl bg-gradient-to-br from-teal-500/20 to-teal-600/20 group-hover:from-teal-500/30 group-hover:to-teal-600/30 transition-all duration-300">
+                            <Settings className="h-7 w-7 text-teal-400" />
                           </div>
-                          <h3 className="text-white font-semibold text-lg">Advanced Options</h3>
+                          <div>
+                            <h3 className="text-white font-bold text-xl mb-1">Advanced Controls</h3>
+                            <p className="text-teal-400 text-sm font-medium">Professional Tools</p>
+                          </div>
                         </div>
-                        <p className="text-gray-300 text-sm leading-relaxed font-bold">
-                          Fine-tune every aspect of your model with professional-grade controls and AI-powered
-                          recommendations.
+                        <p className="text-gray-300 text-base leading-relaxed">
+                          Fine-tune every aspect with professional-grade controls and AI-powered recommendations for
+                          optimal results.
                         </p>
                       </CardContent>
                     </Card>
@@ -912,22 +992,51 @@ export default function Rodin() {
                   value={saveModelName}
                   onChange={(e) => setSaveModelName(e.target.value)}
                   className="bg-slate-700/50 border-slate-600 text-white placeholder:text-gray-400 focus:border-blue-500 focus:ring-blue-500/20"
+                  disabled={isSaving}
                 />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-white font-medium text-sm">Model Details</Label>
+                <div className="bg-slate-800/50 rounded-lg p-3 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Prompt:</span>
+                    <span className="text-white text-right max-w-[200px] truncate">{currentPrompt}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Quality:</span>
+                    <span className="text-white">{options.quality.toUpperCase()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Format:</span>
+                    <span className="text-white">{options.geometry_file_format.toUpperCase()}</span>
+                  </div>
+                </div>
               </div>
               <div className="flex gap-3">
                 <Button
                   onClick={() => setShowSaveDialog(false)}
                   variant="outline"
                   className="flex-1 bg-slate-700/50 border-slate-600 text-gray-300 hover:bg-slate-600/50 hover:text-white"
+                  disabled={isSaving}
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleSaveConfirm}
-                  disabled={!saveModelName.trim()}
-                  className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white"
+                  disabled={!saveModelName.trim() || isSaving}
+                  className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white disabled:opacity-50"
                 >
-                  Save Model
+                  {isSaving ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Save Model
+                    </>
+                  )}
                 </Button>
               </div>
             </div>

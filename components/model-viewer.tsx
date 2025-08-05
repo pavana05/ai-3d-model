@@ -33,7 +33,7 @@ export default function ModelViewer({ modelUrl }: { modelUrl: string | null }) {
           <directionalLight position={[0, 10, 5]} intensity={0.5} />
 
           <Suspense fallback={<LoadingPlaceholder />}>
-            {modelUrl ? <ModelComponent url={modelUrl} /> : <LoadingPlaceholder />}
+            {modelUrl ? <ModelComponent key={modelUrl} url={modelUrl} /> : <LoadingPlaceholder />}
           </Suspense>
 
           <OrbitControls
