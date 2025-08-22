@@ -15,7 +15,7 @@ interface SmartOptionsPanelProps {
 
 interface OptimizationSuggestion {
   id: string
-  type: "performance" | "quality" | "compatibility" | "warning"
+  type: "performance" | "quality" | "compatibility" | "warning" | "facial"
   title: string
   description: string
   impact: "low" | "medium" | "high"
@@ -31,6 +31,123 @@ export default function SmartOptionsPanel({ currentOptions, onOptionsChange, cla
   // Analyze current settings and generate suggestions
   const analyzeSettings = () => {
     const newSuggestions: OptimizationSuggestion[] = []
+
+    // Check if this is likely a facial model based on prompt or settings
+    const isFacialModel =
+      currentOptions.prompt?.toLowerCase().includes("face") ||
+      currentOptions.prompt?.toLowerCase().includes("head") ||
+      currentOptions.prompt?.toLowerCase().includes("portrait") ||
+      currentOptions.prompt?.toLowerCase().includes("person") ||
+      currentOptions.prompt?.toLowerCase().includes("human") ||
+      currentOptions.prompt?.toLowerCase().includes("eye") ||
+      currentOptions.facial_detail_enhancement
+
+    // Facial-specific suggestions
+    if (isFacialModel) {
+      if (!currentOptions.eye_clarity_boost) {
+        newSuggestions.push({
+          id: "enable-eye-clarity",
+          type: "facial",
+          title: "Enable Eye Clarity Boost",
+          description: "Specifically enhance eye details for clearer, more realistic eyes in facial models.",
+          impact: "high",
+          settings: { eye_clarity_boost: true },
+          currentValue: "Disabled",
+          suggestedValue: "Enabled",
+        })
+      }
+
+      if (!currentOptions.facial_detail_enhancement) {
+        newSuggestions.push({
+          id: "enable-facial-enhancement",
+          type: "facial",
+          title: "Enable Facial Detail Enhancement",
+          description: "Improve overall facial features and details for more realistic results.",
+          impact: "high",
+          settings: { facial_detail_enhancement: true },
+          currentValue: "Disabled",
+          suggestedValue: "Enabled",
+        })
+      }
+
+      if (!currentOptions.facial_feature_sharpening) {
+        newSuggestions.push({
+          id: "enable-feature-sharpening",
+          type: "facial",
+          title: "Enable Feature Sharpening",
+          description: "Sharpen facial features like nose, lips, and eyebrows for better definition.",
+          impact: "medium",
+          settings: { facial_feature_sharpening: true },
+          currentValue: "Disabled",
+          suggestedValue: "Enabled",
+        })
+      }
+
+      if (!currentOptions.skin_texture_enhancement) {
+        newSuggestions.push({
+          id: "enable-skin-texture",
+          type: "facial",
+          title: "Enable Skin Texture Enhancement",
+          description: "Improve skin texture and surface details for more realistic skin appearance.",
+          impact: "medium",
+          settings: { skin_texture_enhancement: true },
+          currentValue: "Disabled",
+          suggestedValue: "Enabled",
+        })
+      }
+
+      if (currentOptions.quality !== "high") {
+        newSuggestions.push({
+          id: "high-quality-face",
+          type: "facial",
+          title: "Use High Quality for Faces",
+          description: "High quality setting provides better results for facial models, especially for eye clarity.",
+          impact: "high",
+          settings: { quality: "high" },
+          currentValue: currentOptions.quality,
+          suggestedValue: "High",
+        })
+      }
+
+      if (currentOptions.texture_resolution !== "4096" && currentOptions.texture_resolution !== "8192") {
+        newSuggestions.push({
+          id: "high-res-texture-face",
+          type: "facial",
+          title: "Increase Texture Resolution",
+          description: "Higher texture resolution (4096px) provides clearer facial details and eye textures.",
+          impact: "high",
+          settings: { texture_resolution: "4096" },
+          currentValue: `${currentOptions.texture_resolution}px`,
+          suggestedValue: "4096px",
+        })
+      }
+
+      if (!currentOptions.subsurface_scattering) {
+        newSuggestions.push({
+          id: "enable-subsurface",
+          type: "facial",
+          title: "Enable Subsurface Scattering",
+          description: "Adds realistic skin lighting effects that make facial models look more lifelike.",
+          impact: "medium",
+          settings: { subsurface_scattering: true },
+          currentValue: "Disabled",
+          suggestedValue: "Enabled",
+        })
+      }
+
+      if (!currentOptions.normal_map_generation) {
+        newSuggestions.push({
+          id: "enable-normal-maps",
+          type: "facial",
+          title: "Enable Normal Map Generation",
+          description: "Adds surface detail to facial features without increasing geometry complexity.",
+          impact: "medium",
+          settings: { normal_map_generation: true },
+          currentValue: "Disabled",
+          suggestedValue: "Enabled",
+        })
+      }
+    }
 
     // Performance optimizations
     if (currentOptions.texture_resolution === "8192" && currentOptions.export_variants?.includes("mobile")) {
@@ -60,7 +177,7 @@ export default function SmartOptionsPanel({ currentOptions, onOptionsChange, cla
     }
 
     // Quality improvements
-    if (currentOptions.quality === "high" && !currentOptions.ai_upscaling) {
+    if (currentOptions.quality === "high" && !currentOptions.ai_upscaling && !isFacialModel) {
       newSuggestions.push({
         id: "ai-upscaling-quality",
         type: "quality",
@@ -148,6 +265,11 @@ export default function SmartOptionsPanel({ currentOptions, onOptionsChange, cla
     if (currentOptions.detail_boost === "ultra") score += 20
     if (currentOptions.texture_resolution === "4096") score += 10
     if (currentOptions.texture_resolution === "8192") score += 20
+    // Facial enhancement bonuses
+    if (currentOptions.facial_detail_enhancement) score += 10
+    if (currentOptions.eye_clarity_boost) score += 10
+    if (currentOptions.facial_feature_sharpening) score += 5
+    if (currentOptions.skin_texture_enhancement) score += 5
     return Math.min(100, score)
   }
 
@@ -169,6 +291,8 @@ export default function SmartOptionsPanel({ currentOptions, onOptionsChange, cla
         return <Settings className="h-4 w-4 text-purple-400" />
       case "warning":
         return <AlertTriangle className="h-4 w-4 text-yellow-400" />
+      case "facial":
+        return <Eye className="h-4 w-4 text-pink-400" />
       default:
         return <Info className="h-4 w-4 text-gray-400" />
     }
@@ -184,6 +308,8 @@ export default function SmartOptionsPanel({ currentOptions, onOptionsChange, cla
         return "border-purple-500/30 bg-purple-900/20"
       case "warning":
         return "border-yellow-500/30 bg-yellow-900/20"
+      case "facial":
+        return "border-pink-500/30 bg-pink-900/20"
       default:
         return "border-gray-500/30 bg-gray-900/20"
     }
@@ -325,6 +451,19 @@ export default function SmartOptionsPanel({ currentOptions, onOptionsChange, cla
                 neural_enhancement: true,
                 detail_boost: "high",
                 texture_resolution: "4096",
+                // Add facial enhancements if it's a facial model
+                ...(currentOptions.prompt?.toLowerCase().includes("face") ||
+                currentOptions.prompt?.toLowerCase().includes("head") ||
+                currentOptions.prompt?.toLowerCase().includes("person")
+                  ? {
+                      facial_detail_enhancement: true,
+                      eye_clarity_boost: true,
+                      facial_feature_sharpening: true,
+                      skin_texture_enhancement: true,
+                      subsurface_scattering: true,
+                      normal_map_generation: true,
+                    }
+                  : {}),
               }
               onOptionsChange(qualitySettings)
             }}

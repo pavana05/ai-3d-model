@@ -7,15 +7,10 @@ import {
   ArrowLeft,
   Menu,
   X,
-  Sparkles,
-  Zap,
-  Eye,
   Share2,
   Heart,
-  Star,
   Info,
   Settings,
-  Palette,
   Grid3X3,
   Globe,
   User,
@@ -105,6 +100,13 @@ export default function Rodin() {
     detail_preservation: true,
     surface_refinement: false,
     micro_detail_recovery: false,
+    // Enhanced facial options
+    facial_detail_enhancement: false,
+    eye_clarity_boost: false,
+    facial_feature_sharpening: false,
+    skin_texture_enhancement: false,
+    facial_symmetry_correction: false,
+    // Advanced features
     ai_upscaling: false,
     neural_enhancement: false,
     adaptive_lod: false,
@@ -159,7 +161,7 @@ export default function Rodin() {
             }
 
             if (downloadData.list && downloadData.list.length > 0) {
-              console.log("Files available for download:", downloadData.list) // Log all files
+              console.log("Files available for download:", downloadData.list)
               const glbFile = downloadData.list.find((file: { name: string }) =>
                 file.name.toLowerCase().endsWith(".glb"),
               )
@@ -167,11 +169,9 @@ export default function Rodin() {
               if (glbFile) {
                 console.log("Found GLB file:", glbFile)
 
-                // Use proxy URL directly
                 const proxyUrl = `/api/proxy-download?url=${encodeURIComponent(glbFile.url)}`
                 console.log("Using proxy URL:", proxyUrl)
 
-                // Test the proxy URL before setting it
                 try {
                   const testResponse = await fetch(proxyUrl, { method: "HEAD" })
                   if (testResponse.ok) {
@@ -185,7 +185,6 @@ export default function Rodin() {
                   }
                 } catch (proxyError) {
                   console.error("Proxy test failed:", proxyError)
-                  // Try direct URL as fallback
                   console.log("Trying direct URL as fallback")
                   setModelUrl(glbFile.url)
                   setDownloadUrl(glbFile.url)
@@ -193,7 +192,7 @@ export default function Rodin() {
                   setShowPromptContainer(false)
                 }
               } else {
-                console.error("No GLB file found in the results. Available files:", downloadData.list) // Log available files
+                console.error("No GLB file found in the results. Available files:", downloadData.list)
                 setError("No GLB file found in the results. Please check the console for details.")
                 setIsLoading(false)
               }
@@ -296,7 +295,6 @@ export default function Rodin() {
       return
     }
 
-    // Auto-generate a name if none provided
     const defaultName = `3D Model - ${new Date().toLocaleDateString()}`
     setSaveModelName(defaultName)
     setShowSaveDialog(true)
@@ -378,7 +376,6 @@ export default function Rodin() {
         console.log("Error sharing:", err)
       }
     } else {
-      // Fallback to clipboard
       navigator.clipboard.writeText(window.location.href)
       toast({
         title: "Link Copied",
@@ -722,6 +719,61 @@ export default function Rodin() {
               </div>
             )}
 
+            {/* Input form */}
+            {showPromptContainer && (
+              <div className="relative py-8 sm:py-12 lg:py-16">
+                {/* Background decorative elements */}
+                <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                  <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-full blur-3xl animate-pulse" />
+                  <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-full blur-3xl animate-pulse delay-1000" />
+                </div>
+
+                <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+                  {/* Professional container with enhanced glass morphism */}
+                  <div className="relative group">
+                    {/* Outer glow effect */}
+                    <div className="absolute -inset-2 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-cyan-600/20 rounded-3xl blur-2xl opacity-60 group-hover:opacity-100 transition-all duration-700" />
+
+                    {/* Main form container */}
+                    <div className="relative bg-gradient-to-br from-slate-900/95 via-gray-900/95 to-slate-800/95 backdrop-blur-3xl border border-white/20 rounded-3xl shadow-2xl overflow-hidden">
+                      {/* Top accent gradient */}
+                      <div className="h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-500" />
+
+                      {/* Inner container */}
+                      <div className="p-8 sm:p-12 lg:p-16">
+                        {/* Enhanced header section */}
+                        <div className="text-center mb-12">
+                          <div className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-gradient-to-r from-blue-500/15 to-purple-500/15 border border-blue-500/30 mb-6 backdrop-blur-sm">
+                            <div className="w-3 h-3 bg-blue-400 rounded-full animate-pulse" />
+                            <span className="text-sm font-semibold text-blue-300 tracking-wide">
+                              AI MODEL GENERATOR
+                            </span>
+                          </div>
+                          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4 bg-gradient-to-r from-white via-blue-200 to-purple-200 bg-clip-text text-transparent leading-tight">
+                            Create Your 3D Model
+                          </h2>
+                          <p className="text-gray-300 text-lg sm:text-xl max-w-3xl mx-auto leading-relaxed">
+                            Transform your ideas into stunning 3D models using advanced AI technology. Upload images or
+                            describe your vision with enhanced facial clarity features.
+                          </p>
+                        </div>
+
+                        {/* Form component */}
+                        <EnhancedForm
+                          isLoading={isLoading}
+                          onSubmit={handleSubmit}
+                          onOpenOptions={() => setShowOptions(true)}
+                        />
+                      </div>
+
+                      {/* Bottom accent gradient */}
+                      <div className="h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-500" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Model controls */}
             {!isLoading && modelUrl && !showPromptContainer && (
               <div className="p-4 sm:p-6 lg:p-8 animate-in slide-in-from-bottom duration-700">
@@ -778,153 +830,6 @@ export default function Rodin() {
                       <CardContent className="p-4 text-center">
                         <div className="text-lg font-bold text-yellow-400">{options.material}</div>
                         <div className="text-xs text-gray-400">Material</div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Input form */}
-            {showPromptContainer && (
-              <div className="p-4 sm:p-6 lg:p-8 animate-in slide-in-from-bottom duration-500">
-                <EnhancedForm
-                  isLoading={isLoading}
-                  onSubmit={handleSubmit}
-                  onOpenOptions={() => setShowOptions(true)}
-                />
-              </div>
-            )}
-
-            {/* Features showcase */}
-            {!isLoading && !modelUrl && showPromptContainer && (
-              <div className="p-4 sm:p-6 lg:p-8 border-t border-white/10 animate-in slide-in-from-bottom duration-700 delay-200">
-                <div className="max-w-6xl mx-auto">
-                  <div className="text-center mb-12 sm:mb-16">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 mb-6">
-                      <Sparkles className="h-4 w-4 text-blue-400" />
-                      <span className="text-sm font-medium text-blue-300">AI-Powered Technology</span>
-                    </div>
-                    <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6 leading-tight">
-                      Professional 3D Model Generation
-                    </h2>
-                    <p className="text-gray-300 text-lg sm:text-xl max-w-3xl mx-auto leading-relaxed">
-                      Transform your creative vision into production-ready 3D assets with enterprise-grade AI technology
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    <Card className="group relative overflow-hidden bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-slate-700/50 hover:border-blue-500/30 transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-blue-500/10">
-                      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                      <CardContent className="p-8 relative z-10">
-                        <div className="flex items-center gap-4 mb-6">
-                          <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-500/20 to-blue-600/20 group-hover:from-blue-500/30 group-hover:to-blue-600/30 transition-all duration-300">
-                            <Sparkles className="h-7 w-7 text-blue-400" />
-                          </div>
-                          <div>
-                            <h3 className="text-white font-bold text-xl mb-1">AI-Powered Generation</h3>
-                            <p className="text-blue-400 text-sm font-medium">Neural Networks</p>
-                          </div>
-                        </div>
-                        <p className="text-gray-300 text-base leading-relaxed">
-                          Advanced deep learning algorithms analyze your inputs to generate highly detailed 3D models
-                          with unprecedented accuracy and realism.
-                        </p>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="group relative overflow-hidden bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-slate-700/50 hover:border-green-500/30 transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-green-500/10">
-                      <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                      <CardContent className="p-8 relative z-10">
-                        <div className="flex items-center gap-4 mb-6">
-                          <div className="p-4 rounded-2xl bg-gradient-to-br from-green-500/20 to-green-600/20 group-hover:from-green-500/30 group-hover:to-green-600/30 transition-all duration-300">
-                            <Palette className="h-7 w-7 text-green-400" />
-                          </div>
-                          <div>
-                            <h3 className="text-white font-bold text-xl mb-1">Multiple Formats</h3>
-                            <p className="text-green-400 text-sm font-medium">Universal Export</p>
-                          </div>
-                        </div>
-                        <p className="text-gray-300 text-base leading-relaxed">
-                          Export in industry-standard formats including GLB, USDZ, FBX, OBJ, and STL for seamless
-                          integration across platforms.
-                        </p>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="group relative overflow-hidden bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-slate-700/50 hover:border-orange-500/30 transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-orange-500/10">
-                      <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                      <CardContent className="p-8 relative z-10">
-                        <div className="flex items-center gap-4 mb-6">
-                          <div className="p-4 rounded-2xl bg-gradient-to-br from-orange-500/20 to-orange-600/20 group-hover:from-orange-500/30 group-hover:to-orange-600/30 transition-all duration-300">
-                            <Star className="h-7 w-7 text-orange-400" />
-                          </div>
-                          <div>
-                            <h3 className="text-white font-bold text-xl mb-1">Enterprise Quality</h3>
-                            <p className="text-orange-400 text-sm font-medium">Production Ready</p>
-                          </div>
-                        </div>
-                        <p className="text-gray-300 text-base leading-relaxed">
-                          High-resolution textures, optimized geometry, and professional materials suitable for
-                          commercial applications.
-                        </p>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="group relative overflow-hidden bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-slate-700/50 hover:border-purple-500/30 transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-purple-500/10">
-                      <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                      <CardContent className="p-8 relative z-10">
-                        <div className="flex items-center gap-4 mb-6">
-                          <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-500/20 to-purple-600/20 group-hover:from-purple-500/30 group-hover:to-purple-600/30 transition-all duration-300">
-                            <Zap className="h-7 w-7 text-purple-400" />
-                          </div>
-                          <div>
-                            <h3 className="text-white font-bold text-xl mb-1">Lightning Fast</h3>
-                            <p className="text-purple-400 text-sm font-medium">Optimized Pipeline</p>
-                          </div>
-                        </div>
-                        <p className="text-gray-300 text-base leading-relaxed">
-                          Generate complex 3D models in minutes with our optimized AI infrastructure and advanced
-                          processing algorithms.
-                        </p>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="group relative overflow-hidden bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-slate-700/50 hover:border-cyan-500/30 transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-cyan-500/10">
-                      <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                      <CardContent className="p-8 relative z-10">
-                        <div className="flex items-center gap-4 mb-6">
-                          <div className="p-4 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-cyan-600/20 group-hover:from-cyan-500/30 group-hover:to-cyan-600/30 transition-all duration-300">
-                            <Eye className="h-7 w-7 text-cyan-400" />
-                          </div>
-                          <div>
-                            <h3 className="text-white font-bold text-xl mb-1">Real-time Preview</h3>
-                            <p className="text-cyan-400 text-sm font-medium">Interactive Viewer</p>
-                          </div>
-                        </div>
-                        <p className="text-gray-300 text-base leading-relaxed">
-                          Inspect your models with our advanced 3D viewer featuring real-time rendering and
-                          comprehensive controls.
-                        </p>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="group relative overflow-hidden bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-slate-700/50 hover:border-teal-500/30 transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-teal-500/10">
-                      <div className="absolute inset-0 bg-gradient-to-br from-teal-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                      <CardContent className="p-8 relative z-10">
-                        <div className="flex items-center gap-4 mb-6">
-                          <div className="p-4 rounded-2xl bg-gradient-to-br from-teal-500/20 to-teal-600/20 group-hover:from-teal-500/30 group-hover:to-teal-600/30 transition-all duration-300">
-                            <Settings className="h-7 w-7 text-teal-400" />
-                          </div>
-                          <div>
-                            <h3 className="text-white font-bold text-xl mb-1">Advanced Controls</h3>
-                            <p className="text-teal-400 text-sm font-medium">Professional Tools</p>
-                          </div>
-                        </div>
-                        <p className="text-gray-300 text-base leading-relaxed">
-                          Fine-tune every aspect with professional-grade controls and AI-powered recommendations for
-                          optimal results.
-                        </p>
                       </CardContent>
                     </Card>
                   </div>
@@ -1066,7 +971,7 @@ export default function Rodin() {
                   </p>
                   <p>
                     Features include multiple export formats, real-time preview, professional-grade quality settings,
-                    and user accounts to save your creations.
+                    facial enhancement options for clearer eyes and features, and user accounts to save your creations.
                   </p>
                   <p>Built with love by Pavan.A using Next.js, Three.js, and the Hyper3D Rodin API.</p>
                 </div>

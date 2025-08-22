@@ -37,6 +37,7 @@ export default function ModelViewer({ modelUrl }: { modelUrl: string | null }) {
           </Suspense>
 
           <OrbitControls
+            makeDefault
             minDistance={2}
             maxDistance={12}
             enableZoom={true}
