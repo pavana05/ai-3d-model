@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useRef, useEffect } from "react"
+import { useState, useEffect } from "react"
 import {
   ExternalLink,
   Download,
@@ -17,11 +17,6 @@ import {
   LogOut,
   Save,
   Folder,
-  History,
-  Bookmark,
-  Sparkles,
-  BarChart3,
-  Home,
 } from "lucide-react"
 import type { FormValues } from "@/lib/form-schema"
 import { submitRodinJob, checkJobStatus, downloadModel } from "@/lib/api-service"
@@ -49,18 +44,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
-import { SidebarProvider } from "@/components/ui/sidebar"
-
-interface GenerationResult {
-  id: string
-  status: "processing" | "completed" | "failed"
-  progress: number
-  modelUrl?: string
-  thumbnailUrl?: string
-  downloadUrl?: string
-  settings: FormValues
-  createdAt: Date
-}
 
 export default function Rodin() {
   const [isLoading, setIsLoading] = useState(false)
@@ -87,22 +70,6 @@ export default function Rodin() {
 
   const { user, logout, saveModel } = useAuth()
   const { toast } = useToast()
-
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [currentGeneration, setCurrentGeneration] = useState<GenerationResult | null>(null)
-  const [generationHistory, setGenerationHistory] = useState<GenerationResult[]>([])
-  const [showOptionsPanel, setShowOptionsPanel] = useState(false)
-  const [currentSettings, setCurrentSettings] = useState<FormValues | null>(null)
-  const pollIntervalRef = useRef<NodeJS.Timeout>()
-
-  // Cleanup polling on unmount
-  useEffect(() => {
-    return () => {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current)
-      }
-    }
-  }, [])
 
   // Enhanced background animation
   useEffect(() => {
@@ -257,7 +224,7 @@ export default function Rodin() {
     }
   }
 
-  async function submitForm(values: FormValues) {
+  async function handleSubmit(values: FormValues) {
     setIsLoading(true)
     setError(null)
     setResult(null)
@@ -453,636 +420,566 @@ export default function Rodin() {
     "bg-gradient-to-br from-purple-900/80 via-slate-900 to-blue-900/80",
   ]
 
-  const sidebarMenuItems = [
-    { title: "Dashboard", icon: Home, url: "#" },
-    { title: "Generate", icon: Sparkles, url: "#", isActive: true },
-    { title: "History", icon: History, url: "#" },
-    { title: "Saved Models", icon: Bookmark, url: "#" },
-    { title: "Analytics", icon: BarChart3, url: "#" },
-    { title: "Settings", icon: Settings, url: "#" },
-  ]
-
-  const startPolling = useCallback(
-    (taskId: string) => {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current)
-      }
-
-      pollIntervalRef.current = setInterval(async () => {
-        try {
-          const response = await fetch(`/api/status?taskId=${taskId}`)
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`)
-          }
-
-          const statusData = await response.json()
-
-          if (statusData.success) {
-            const updatedGeneration: GenerationResult = {
-              id: taskId,
-              status: statusData.status,
-              progress: statusData.progress || 0,
-              modelUrl: statusData.modelUrl,
-              thumbnailUrl: statusData.thumbnailUrl,
-              downloadUrl: statusData.downloadUrl,
-              settings: currentSettings!,
-              createdAt: new Date(),
-            }
-
-            setCurrentGeneration(updatedGeneration)
-            setGenerationHistory((prev) => prev.map((gen) => (gen.id === taskId ? updatedGeneration : gen)))
-
-            if (statusData.status === "completed" || statusData.status === "failed") {
-              setIsGenerating(false)
-              if (pollIntervalRef.current) {
-                clearInterval(pollIntervalRef.current)
-              }
-            }
-          }
-        } catch (error) {
-          console.error("Error polling status:", error)
-          setIsGenerating(false)
-          if (pollIntervalRef.current) {
-            clearInterval(pollIntervalRef.current)
-          }
-        }
-      }, 2000) // Poll every 2 seconds
-    },
-    [currentSettings],
-  )
-
-  const updateSettings = useCallback(
-    (options: Record<string, any>) => {
-      if (currentSettings) {
-        setCurrentSettings({ ...currentSettings, ...options })
-      }
-    },
-    [currentSettings],
-  )
-
   return (
     <TooltipProvider>
-      <SidebarProvider>
-        <div className="relative min-h-screen w-full overflow-hidden">
-          {/* Enhanced animated background */}
-          <div className={`fixed inset-0 transition-all duration-[8000ms] ${backgroundEffects[backgroundEffect]}`}>
-            <div className="absolute inset-0 bg-black/40" />
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_25%,rgba(59,130,246,0.1)_0%,transparent_50%),radial-gradient(circle_at_75%_75%,rgba(147,51,234,0.1)_0%,transparent_50%)]" />
-            <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:60px_60px] opacity-30" />
-          </div>
+      <div className="relative min-h-screen w-full overflow-hidden">
+        {/* Enhanced animated background */}
+        <div className={`fixed inset-0 transition-all duration-[8000ms] ${backgroundEffects[backgroundEffect]}`}>
+          <div className="absolute inset-0 bg-black/40" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_25%,rgba(59,130,246,0.1)_0%,transparent_50%),radial-gradient(circle_at_75%_75%,rgba(147,51,234,0.1)_0%,transparent_50%)]" />
+          <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:60px_60px] opacity-30" />
+        </div>
 
-          {/* Professional header */}
-          <header className="relative z-20 bg-black/20 backdrop-blur-xl border-b border-white/10 sticky top-0">
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex items-center justify-between h-16 sm:h-20">
-                {/* Logo section */}
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 sm:gap-4">
-                    <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-r from-blue-500/20 to-purple-500/20 backdrop-blur-sm border border-white/10 flex-shrink-0">
-                      <Grid3X3 className="h-5 w-5 sm:h-6 sm:w-6 text-blue-400" />
-                    </div>
-                    <div className="min-w-0">
-                      <h1 className="text-lg sm:text-xl lg:text-2xl text-white font-bold bg-gradient-to-r from-white via-blue-200 to-purple-200 bg-clip-text text-transparent">
-                        3D AI Model Generator
-                      </h1>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <p className="text-gray-400 text-xs sm:text-sm">Made with ❤️ by Pavan.A</p>
-                        <Badge
-                          variant="outline"
-                          className="text-xs bg-blue-900/50 text-blue-300 border-blue-500/30 hidden sm:inline-flex"
-                        >
-                          AI Powered
-                        </Badge>
-                      </div>
+        {/* Professional header */}
+        <header className="relative z-20 bg-black/20 backdrop-blur-xl border-b border-white/10 sticky top-0">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between h-16 sm:h-20">
+              {/* Logo section */}
+              <div className="flex-1">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-r from-blue-500/20 to-purple-500/20 backdrop-blur-sm border border-white/10 flex-shrink-0">
+                    <Grid3X3 className="h-5 w-5 sm:h-6 sm:w-6 text-blue-400" />
+                  </div>
+                  <div className="min-w-0">
+                    <h1 className="text-lg sm:text-xl lg:text-2xl text-white font-bold bg-gradient-to-r from-white via-blue-200 to-purple-200 bg-clip-text text-transparent">
+                      3D AI Model Generator
+                    </h1>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <p className="text-gray-400 text-xs sm:text-sm">Made with ❤️ by Pavan.A</p>
+                      <Badge
+                        variant="outline"
+                        className="text-xs bg-blue-900/50 text-blue-300 border-blue-500/30 hidden sm:inline-flex"
+                      >
+                        AI Powered
+                      </Badge>
                     </div>
                   </div>
                 </div>
-
-                {/* Desktop navigation */}
-                {!isMobile && (
-                  <div className="flex items-center gap-4">
-                    <ExternalLinks />
-                    <Separator orientation="vertical" className="h-6 bg-white/20" />
-                    <div className="flex items-center gap-2">
-                      {user ? (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg flex items-center gap-2 px-3"
-                            >
-                              <div className="w-6 h-6 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
-                                <User className="h-3 w-3 text-white" />
-                              </div>
-                              <span className="text-sm">{user.name}</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent className="bg-slate-900/95 border-white/20 backdrop-blur-xl">
-                            <DropdownMenuItem
-                              onClick={() => setShowSavedModels(true)}
-                              className="text-white hover:bg-white/10"
-                            >
-                              <Folder className="h-4 w-4 mr-2" />
-                              My Models
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator className="bg-white/20" />
-                            <DropdownMenuItem onClick={logout} className="text-red-400 hover:bg-red-500/10">
-                              <LogOut className="h-4 w-4 mr-2" />
-                              Sign Out
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      ) : (
-                        <Button
-                          onClick={() => setShowLoginDialog(true)}
-                          variant="ghost"
-                          className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg flex items-center gap-2"
-                        >
-                          <User className="h-4 w-4" />
-                          <span>Sign In</span>
-                        </Button>
-                      )}
-
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setShowInfo(!showInfo)}
-                            className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg"
-                          >
-                            <Info className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>About this app</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                  </div>
-                )}
-
-                {/* Mobile menu button */}
-                {isMobile && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setShowMobileMenu(!showMobileMenu)}
-                    className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-300"
-                  >
-                    {showMobileMenu ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-                  </Button>
-                )}
               </div>
 
-              {/* Mobile menu */}
-              {isMobile && showMobileMenu && (
-                <div className="border-t border-white/10 py-4 animate-in slide-in-from-top duration-300">
-                  <div className="space-y-4">
-                    <ExternalLinks />
-                    <Separator className="bg-white/10" />
-                    <div className="flex flex-col gap-2">
-                      {user ? (
-                        <>
-                          <div className="flex items-center gap-2 text-white/80 px-2">
+              {/* Desktop navigation */}
+              {!isMobile && (
+                <div className="flex items-center gap-4">
+                  <ExternalLinks />
+                  <Separator orientation="vertical" className="h-6 bg-white/20" />
+                  <div className="flex items-center gap-2">
+                    {user ? (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg flex items-center gap-2 px-3"
+                          >
                             <div className="w-6 h-6 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
                               <User className="h-3 w-3 text-white" />
                             </div>
                             <span className="text-sm">{user.name}</span>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setShowSavedModels(true)
-                              setShowMobileMenu(false)
-                            }}
-                            className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg flex items-center gap-2 justify-start"
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="bg-slate-900/95 border-white/20 backdrop-blur-xl">
+                          <DropdownMenuItem
+                            onClick={() => setShowSavedModels(true)}
+                            className="text-white hover:bg-white/10"
                           >
-                            <Folder className="h-4 w-4" />
+                            <Folder className="h-4 w-4 mr-2" />
                             My Models
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              logout()
-                              setShowMobileMenu(false)
-                            }}
-                            className="text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg flex items-center gap-2 justify-start"
-                          >
-                            <LogOut className="h-4 w-4" />
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator className="bg-white/20" />
+                          <DropdownMenuItem onClick={logout} className="text-red-400 hover:bg-red-500/10">
+                            <LogOut className="h-4 w-4 mr-2" />
                             Sign Out
-                          </Button>
-                        </>
-                      ) : (
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    ) : (
+                      <Button
+                        onClick={() => setShowLoginDialog(true)}
+                        variant="ghost"
+                        className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg flex items-center gap-2"
+                      >
+                        <User className="h-4 w-4" />
+                        <span>Sign In</span>
+                      </Button>
+                    )}
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setShowInfo(!showInfo)}
+                          className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg"
+                        >
+                          <Info className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>About this app</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                </div>
+              )}
+
+              {/* Mobile menu button */}
+              {isMobile && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowMobileMenu(!showMobileMenu)}
+                  className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-300"
+                >
+                  {showMobileMenu ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                </Button>
+              )}
+            </div>
+
+            {/* Mobile menu */}
+            {isMobile && showMobileMenu && (
+              <div className="border-t border-white/10 py-4 animate-in slide-in-from-top duration-300">
+                <div className="space-y-4">
+                  <ExternalLinks />
+                  <Separator className="bg-white/10" />
+                  <div className="flex flex-col gap-2">
+                    {user ? (
+                      <>
+                        <div className="flex items-center gap-2 text-white/80 px-2">
+                          <div className="w-6 h-6 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
+                            <User className="h-3 w-3 text-white" />
+                          </div>
+                          <span className="text-sm">{user.name}</span>
+                        </div>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => {
-                            setShowLoginDialog(true)
+                            setShowSavedModels(true)
                             setShowMobileMenu(false)
                           }}
                           className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg flex items-center gap-2 justify-start"
                         >
-                          <User className="h-4 w-4" />
-                          Sign In
+                          <Folder className="h-4 w-4" />
+                          My Models
                         </Button>
-                      )}
-
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            logout()
+                            setShowMobileMenu(false)
+                          }}
+                          className="text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg flex items-center gap-2 justify-start"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          Sign Out
+                        </Button>
+                      </>
+                    ) : (
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => {
-                          setShowInfo(!showInfo)
+                          setShowLoginDialog(true)
                           setShowMobileMenu(false)
                         }}
                         className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg flex items-center gap-2 justify-start"
                       >
-                        <Info className="h-4 w-4" />
-                        About
+                        <User className="h-4 w-4" />
+                        Sign In
                       </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </header>
-
-          {/* Main content */}
-          <main className="relative flex-1">
-            {/* 3D Viewer */}
-            <div
-              className={`relative transition-all duration-700 ease-in-out ${
-                showPromptContainer ? "h-[40vh] sm:h-[50vh]" : "h-[60vh] sm:h-[70vh]"
-              }`}
-            >
-              <ModelViewer modelUrl={isLoading ? null : modelUrl} />
-
-              {/* Floating controls when model is loaded */}
-              {!isLoading && modelUrl && (
-                <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        onClick={() => setIsLiked(!isLiked)}
-                        size="icon"
-                        className={`rounded-xl backdrop-blur-xl border border-white/20 transition-all duration-300 ${
-                          isLiked
-                            ? "bg-red-500/80 hover:bg-red-600/80 text-white"
-                            : "bg-black/60 hover:bg-black/80 text-white"
-                        }`}
-                      >
-                        <Heart className={`h-4 w-4 ${isLiked ? "fill-current" : ""} transition-all duration-300`} />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{isLiked ? "Unlike" : "Like"} this model</p>
-                    </TooltipContent>
-                  </Tooltip>
-
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        onClick={handleSaveModel}
-                        size="icon"
-                        className="rounded-xl bg-black/60 backdrop-blur-xl border border-white/20 hover:bg-black/80 text-white transition-all duration-300"
-                      >
-                        <Save className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Save this model</p>
-                    </TooltipContent>
-                  </Tooltip>
-
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        onClick={handleShare}
-                        size="icon"
-                        className="rounded-xl bg-black/60 backdrop-blur-xl border border-white/20 hover:bg-black/80 text-white transition-all duration-300"
-                      >
-                        <Share2 className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Share this model</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-              )}
-
-              {/* Model status indicator */}
-              {!isLoading && modelUrl && (
-                <div className="absolute bottom-4 left-4 z-10">
-                  <Card className="bg-black/60 backdrop-blur-xl border-white/20">
-                    <CardContent className="p-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                        <span className="text-white text-sm font-medium">Model Ready</span>
-                        <Badge variant="outline" className="text-xs bg-green-900/50 text-green-300 border-green-500/30">
-                          {options.quality.toUpperCase()}
-                        </Badge>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
-            </div>
-
-            {/* Content section */}
-            <div className="relative z-10 bg-gradient-to-t from-black via-black/95 to-transparent min-h-[60vh] sm:min-h-[50vh]">
-              {/* Error message */}
-              {error && (
-                <div className="p-4 animate-in slide-in-from-bottom duration-500">
-                  <Card className="bg-red-900/20 border-red-500/30 shadow-xl backdrop-blur-xl max-w-4xl mx-auto">
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-3 text-red-300">
-                        <div className="p-2 rounded-full bg-red-500/20">
-                          <X className="h-4 w-4" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-medium">Generation Error</p>
-                          <p className="text-sm opacity-90">{error}</p>
-                        </div>
-                        <Button
-                          onClick={() => setError(null)}
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-300 hover:text-red-100 rounded-lg"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
-
-              {/* Input form */}
-              {showPromptContainer && (
-                <div className="relative py-8 sm:py-12 lg:py-16">
-                  {/* Background decorative elements */}
-                  <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                    <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-full blur-3xl animate-pulse" />
-                    <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-full blur-3xl animate-pulse delay-1000" />
-                  </div>
-
-                  <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-                    {/* Professional container with enhanced glass morphism */}
-                    <div className="relative group">
-                      {/* Outer glow effect */}
-                      <div className="absolute -inset-2 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-cyan-600/20 rounded-3xl blur-2xl opacity-60 group-hover:opacity-100 transition-all duration-700" />
-
-                      {/* Main form container */}
-                      <div className="relative bg-gradient-to-br from-slate-900/95 via-gray-900/95 to-slate-800/95 backdrop-blur-3xl border border-white/20 rounded-3xl shadow-2xl overflow-hidden">
-                        {/* Top accent gradient */}
-                        <div className="h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-500" />
-
-                        {/* Inner container */}
-                        <div className="p-8 sm:p-12 lg:p-16">
-                          {/* Enhanced header section */}
-                          <div className="text-center mb-12">
-                            <div className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-gradient-to-r from-blue-500/15 to-purple-500/15 border border-blue-500/30 mb-6 backdrop-blur-sm">
-                              <div className="w-3 h-3 bg-blue-400 rounded-full animate-pulse" />
-                              <span className="text-sm font-semibold text-blue-300 tracking-wide">
-                                AI MODEL GENERATOR
-                              </span>
-                            </div>
-                            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4 bg-gradient-to-r from-white via-blue-200 to-purple-200 bg-clip-text text-transparent leading-tight">
-                              Create Your 3D Model
-                            </h2>
-                            <p className="text-gray-300 text-lg sm:text-xl max-w-3xl mx-auto leading-relaxed">
-                              Transform your ideas into stunning 3D models using advanced AI technology. Upload images
-                              or describe your vision with enhanced facial clarity features.
-                            </p>
-                          </div>
-
-                          {/* Form component */}
-                          <EnhancedForm
-                            isLoading={isLoading}
-                            onSubmit={submitForm}
-                            onOpenOptions={() => setShowOptions(true)}
-                          />
-                        </div>
-
-                        {/* Bottom accent gradient */}
-                        <div className="h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-500" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Model controls */}
-              {!isLoading && modelUrl && !showPromptContainer && (
-                <div className="p-4 sm:p-6 lg:p-8 animate-in slide-in-from-bottom duration-700">
-                  <div className="max-w-4xl mx-auto">
-                    <div className="flex flex-col sm:flex-row items-center gap-4 mb-6">
-                      <Button
-                        onClick={handleBack}
-                        className="w-full sm:w-auto bg-black/60 hover:bg-black/80 text-white border border-white/20 rounded-xl px-6 py-3 flex items-center justify-center gap-3 backdrop-blur-xl transition-all duration-300 hover:scale-105"
-                      >
-                        <ArrowLeft className="h-5 w-5" />
-                        <span className="font-medium">Generate Another</span>
-                      </Button>
-
-                      <Button
-                        onClick={handleDownload}
-                        className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl px-6 py-3 flex items-center justify-center gap-3 font-medium shadow-lg hover:shadow-blue-500/25 transition-all duration-300 hover:scale-105"
-                      >
-                        <Download className="h-5 w-5" />
-                        <span>Download Model</span>
-                      </Button>
-
-                      <Button
-                        onClick={handleSaveModel}
-                        className="w-full sm:w-auto bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl px-6 py-3 flex items-center justify-center gap-3 font-medium shadow-lg hover:shadow-green-500/25 transition-all duration-300 hover:scale-105"
-                      >
-                        <Save className="h-5 w-5" />
-                        <span>{user ? "Save Model" : "Sign In to Save"}</span>
-                      </Button>
-                    </div>
-
-                    {/* Model statistics */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                      <Card className="bg-black/40 backdrop-blur-xl border-white/10">
-                        <CardContent className="p-4 text-center">
-                          <div className="text-lg font-bold text-blue-400">{options.quality.toUpperCase()}</div>
-                          <div className="text-xs text-gray-400">Quality</div>
-                        </CardContent>
-                      </Card>
-                      <Card className="bg-black/40 backdrop-blur-xl border-white/10">
-                        <CardContent className="p-4 text-center">
-                          <div className="text-lg font-bold text-purple-400">{options.texture_resolution}px</div>
-                          <div className="text-xs text-gray-400">Texture</div>
-                        </CardContent>
-                      </Card>
-                      <Card className="bg-black/40 backdrop-blur-xl border-white/10">
-                        <CardContent className="p-4 text-center">
-                          <div className="text-lg font-bold text-green-400">
-                            {options.geometry_file_format.toUpperCase()}
-                          </div>
-                          <div className="text-xs text-gray-400">Format</div>
-                        </CardContent>
-                      </Card>
-                      <Card className="bg-black/40 backdrop-blur-xl border-white/10">
-                        <CardContent className="p-4 text-center">
-                          <div className="text-lg font-bold text-yellow-400">{options.material}</div>
-                          <div className="text-xs text-gray-400">Material</div>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Footer */}
-              <footer className="p-6 border-t border-white/10 bg-black/40 backdrop-blur-xl">
-                <div className="max-w-6xl mx-auto">
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <p className="text-gray-400 text-sm text-center sm:text-left">
-                      Powered by Hyper3D Rodin API • Built with Next.js and Three.js
-                    </p>
-                    <div className="flex items-center gap-4">
-                      <Badge variant="outline" className="bg-blue-900/50 text-blue-300 border-blue-500/30">
-                        v2.0
-                      </Badge>
-                      <div className="flex items-center gap-2 text-gray-400 text-sm">
-                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                        <span>All systems operational</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </footer>
-            </div>
-          </main>
-
-          {/* Loading indicator */}
-          <StatusIndicator isLoading={isLoading} jobStatuses={jobStatuses} />
-
-          {/* Options dialog */}
-          <OptionsDialog
-            open={showOptions}
-            onOpenChange={setShowOptions}
-            options={options}
-            onOptionsChange={updateSettings}
-            prompt={currentPrompt}
-            images={currentImages}
-          />
-
-          {/* Login dialog */}
-          <LoginDialog open={showLoginDialog} onOpenChange={setShowLoginDialog} />
-
-          {/* Saved models dialog */}
-          <SavedModelsDialog open={showSavedModels} onOpenChange={setShowSavedModels} onLoadModel={handleLoadModel} />
-
-          {/* Save model dialog */}
-          <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
-            <DialogContent className="sm:max-w-md bg-gradient-to-br from-slate-900/95 via-gray-900/95 to-slate-800/95 backdrop-blur-xl border-white/20 shadow-2xl">
-              <DialogHeader>
-                <DialogTitle className="text-xl font-bold bg-gradient-to-r from-white via-blue-200 to-purple-200 bg-clip-text text-transparent">
-                  Save 3D Model
-                </DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="model-name" className="text-white font-medium">
-                    Model Name
-                  </Label>
-                  <Input
-                    id="model-name"
-                    placeholder="Enter a name for your model"
-                    value={saveModelName}
-                    onChange={(e) => setSaveModelName(e.target.value)}
-                    className="bg-slate-700/50 border-slate-600 text-white placeholder:text-gray-400 focus:border-blue-500 focus:ring-blue-500/20"
-                    disabled={isSaving}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-white font-medium text-sm">Model Details</Label>
-                  <div className="bg-slate-800/50 rounded-lg p-3 space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">Prompt:</span>
-                      <span className="text-white text-right max-w-[200px] truncate">{currentPrompt}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">Quality:</span>
-                      <span className="text-white">{options.quality.toUpperCase()}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">Format:</span>
-                      <span className="text-white">{options.geometry_file_format.toUpperCase()}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex gap-3">
-                  <Button
-                    onClick={() => setShowSaveDialog(false)}
-                    variant="outline"
-                    className="flex-1 bg-slate-700/50 border-slate-600 text-gray-300 hover:bg-slate-600/50 hover:text-white"
-                    disabled={isSaving}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleSaveConfirm}
-                    disabled={!saveModelName.trim() || isSaving}
-                    className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white disabled:opacity-50"
-                  >
-                    {isSaving ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="h-4 w-4 mr-2" />
-                        Save Model
-                      </>
                     )}
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
 
-          {/* Info modal */}
-          {showInfo && (
-            <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-              <Card className="bg-slate-900/95 border-white/20 backdrop-blur-xl max-w-md w-full">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-xl font-bold text-white">About This App</h3>
                     <Button
-                      onClick={() => setShowInfo(false)}
                       variant="ghost"
-                      size="icon"
-                      className="text-gray-400 hover:text-white rounded-lg"
+                      size="sm"
+                      onClick={() => {
+                        setShowInfo(!showInfo)
+                        setShowMobileMenu(false)
+                      }}
+                      className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg flex items-center gap-2 justify-start"
                     >
-                      <X className="h-4 w-4" />
+                      <Info className="h-4 w-4" />
+                      About
                     </Button>
                   </div>
-                  <div className="space-y-3 text-gray-300 text-sm">
-                    <p>
-                      This 3D AI Model Generator uses advanced machine learning to create high-quality 3D models from
-                      images and text descriptions.
-                    </p>
-                    <p>
-                      Features include multiple export formats, real-time preview, professional-grade quality settings,
-                      facial enhancement options for clearer eyes and features, and user accounts to save your
-                      creations.
-                    </p>
-                    <p>Built with love by Pavan.A using Next.js, Three.js, and the Hyper3D Rodin API.</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </header>
+
+        {/* Main content */}
+        <main className="relative flex-1">
+          {/* 3D Viewer */}
+          <div
+            className={`relative transition-all duration-700 ease-in-out ${
+              showPromptContainer ? "h-[40vh] sm:h-[50vh]" : "h-[60vh] sm:h-[70vh]"
+            }`}
+          >
+            <ModelViewer modelUrl={isLoading ? null : modelUrl} />
+
+            {/* Floating controls when model is loaded */}
+            {!isLoading && modelUrl && (
+              <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={() => setIsLiked(!isLiked)}
+                      size="icon"
+                      className={`rounded-xl backdrop-blur-xl border border-white/20 transition-all duration-300 ${
+                        isLiked
+                          ? "bg-red-500/80 hover:bg-red-600/80 text-white"
+                          : "bg-black/60 hover:bg-black/80 text-white"
+                      }`}
+                    >
+                      <Heart className={`h-4 w-4 ${isLiked ? "fill-current" : ""} transition-all duration-300`} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{isLiked ? "Unlike" : "Like"} this model</p>
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={handleSaveModel}
+                      size="icon"
+                      className="rounded-xl bg-black/60 backdrop-blur-xl border border-white/20 hover:bg-black/80 text-white transition-all duration-300"
+                    >
+                      <Save className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Save this model</p>
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={handleShare}
+                      size="icon"
+                      className="rounded-xl bg-black/60 backdrop-blur-xl border border-white/20 hover:bg-black/80 text-white transition-all duration-300"
+                    >
+                      <Share2 className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Share this model</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            )}
+
+            {/* Model status indicator */}
+            {!isLoading && modelUrl && (
+              <div className="absolute bottom-4 left-4 z-10">
+                <Card className="bg-black/60 backdrop-blur-xl border-white/20">
+                  <CardContent className="p-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                      <span className="text-white text-sm font-medium">Model Ready</span>
+                      <Badge variant="outline" className="text-xs bg-green-900/50 text-green-300 border-green-500/30">
+                        {options.quality.toUpperCase()}
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </div>
+
+          {/* Content section */}
+          <div className="relative z-10 bg-gradient-to-t from-black via-black/95 to-transparent min-h-[60vh] sm:min-h-[50vh]">
+            {/* Error message */}
+            {error && (
+              <div className="p-4 animate-in slide-in-from-bottom duration-500">
+                <Card className="bg-red-900/20 border-red-500/30 shadow-xl backdrop-blur-xl max-w-4xl mx-auto">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3 text-red-300">
+                      <div className="p-2 rounded-full bg-red-500/20">
+                        <X className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium">Generation Error</p>
+                        <p className="text-sm opacity-90">{error}</p>
+                      </div>
+                      <Button
+                        onClick={() => setError(null)}
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-300 hover:text-red-100 rounded-lg"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* Input form */}
+            {showPromptContainer && (
+              <div className="relative py-8 sm:py-12 lg:py-16">
+                {/* Background decorative elements */}
+                <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                  <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-full blur-3xl animate-pulse" />
+                  <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-full blur-3xl animate-pulse delay-1000" />
+                </div>
+
+                <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+                  {/* Professional container with enhanced glass morphism */}
+                  <div className="relative group">
+                    {/* Outer glow effect */}
+                    <div className="absolute -inset-2 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-cyan-600/20 rounded-3xl blur-2xl opacity-60 group-hover:opacity-100 transition-all duration-700" />
+
+                    {/* Main form container */}
+                    <div className="relative bg-gradient-to-br from-slate-900/95 via-gray-900/95 to-slate-800/95 backdrop-blur-3xl border border-white/20 rounded-3xl shadow-2xl overflow-hidden">
+                      {/* Top accent gradient */}
+                      <div className="h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-500" />
+
+                      {/* Inner container */}
+                      <div className="p-8 sm:p-12 lg:p-16">
+                        {/* Enhanced header section */}
+                        <div className="text-center mb-12">
+                          <div className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-gradient-to-r from-blue-500/15 to-purple-500/15 border border-blue-500/30 mb-6 backdrop-blur-sm">
+                            <div className="w-3 h-3 bg-blue-400 rounded-full animate-pulse" />
+                            <span className="text-sm font-semibold text-blue-300 tracking-wide">
+                              AI MODEL GENERATOR
+                            </span>
+                          </div>
+                          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4 bg-gradient-to-r from-white via-blue-200 to-purple-200 bg-clip-text text-transparent leading-tight">
+                            Create Your 3D Model
+                          </h2>
+                          <p className="text-gray-300 text-lg sm:text-xl max-w-3xl mx-auto leading-relaxed">
+                            Transform your ideas into stunning 3D models using advanced AI technology. Upload images or
+                            describe your vision with enhanced facial clarity features.
+                          </p>
+                        </div>
+
+                        {/* Form component */}
+                        <EnhancedForm
+                          isLoading={isLoading}
+                          onSubmit={handleSubmit}
+                          onOpenOptions={() => setShowOptions(true)}
+                        />
+                      </div>
+
+                      {/* Bottom accent gradient */}
+                      <div className="h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-500" />
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
+            )}
+
+            {/* Model controls */}
+            {!isLoading && modelUrl && !showPromptContainer && (
+              <div className="p-4 sm:p-6 lg:p-8 animate-in slide-in-from-bottom duration-700">
+                <div className="max-w-4xl mx-auto">
+                  <div className="flex flex-col sm:flex-row items-center gap-4 mb-6">
+                    <Button
+                      onClick={handleBack}
+                      className="w-full sm:w-auto bg-black/60 hover:bg-black/80 text-white border border-white/20 rounded-xl px-6 py-3 flex items-center justify-center gap-3 backdrop-blur-xl transition-all duration-300 hover:scale-105"
+                    >
+                      <ArrowLeft className="h-5 w-5" />
+                      <span className="font-medium">Generate Another</span>
+                    </Button>
+
+                    <Button
+                      onClick={handleDownload}
+                      className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl px-6 py-3 flex items-center justify-center gap-3 font-medium shadow-lg hover:shadow-blue-500/25 transition-all duration-300 hover:scale-105"
+                    >
+                      <Download className="h-5 w-5" />
+                      <span>Download Model</span>
+                    </Button>
+
+                    <Button
+                      onClick={handleSaveModel}
+                      className="w-full sm:w-auto bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl px-6 py-3 flex items-center justify-center gap-3 font-medium shadow-lg hover:shadow-green-500/25 transition-all duration-300 hover:scale-105"
+                    >
+                      <Save className="h-5 w-5" />
+                      <span>{user ? "Save Model" : "Sign In to Save"}</span>
+                    </Button>
+                  </div>
+
+                  {/* Model statistics */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <Card className="bg-black/40 backdrop-blur-xl border-white/10">
+                      <CardContent className="p-4 text-center">
+                        <div className="text-lg font-bold text-blue-400">{options.quality.toUpperCase()}</div>
+                        <div className="text-xs text-gray-400">Quality</div>
+                      </CardContent>
+                    </Card>
+                    <Card className="bg-black/40 backdrop-blur-xl border-white/10">
+                      <CardContent className="p-4 text-center">
+                        <div className="text-lg font-bold text-purple-400">{options.texture_resolution}px</div>
+                        <div className="text-xs text-gray-400">Texture</div>
+                      </CardContent>
+                    </Card>
+                    <Card className="bg-black/40 backdrop-blur-xl border-white/10">
+                      <CardContent className="p-4 text-center">
+                        <div className="text-lg font-bold text-green-400">
+                          {options.geometry_file_format.toUpperCase()}
+                        </div>
+                        <div className="text-xs text-gray-400">Format</div>
+                      </CardContent>
+                    </Card>
+                    <Card className="bg-black/40 backdrop-blur-xl border-white/10">
+                      <CardContent className="p-4 text-center">
+                        <div className="text-lg font-bold text-yellow-400">{options.material}</div>
+                        <div className="text-xs text-gray-400">Material</div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Footer */}
+            <footer className="p-6 border-t border-white/10 bg-black/40 backdrop-blur-xl">
+              <div className="max-w-6xl mx-auto">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <p className="text-gray-400 text-sm text-center sm:text-left">
+                    Powered by Hyper3D Rodin API • Built with Next.js and Three.js
+                  </p>
+                  <div className="flex items-center gap-4">
+                    <Badge variant="outline" className="bg-blue-900/50 text-blue-300 border-blue-500/30">
+                      v2.0
+                    </Badge>
+                    <div className="flex items-center gap-2 text-gray-400 text-sm">
+                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                      <span>All systems operational</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </footer>
+          </div>
+        </main>
+
+        {/* Loading indicator */}
+        <StatusIndicator isLoading={isLoading} jobStatuses={jobStatuses} />
+
+        {/* Options dialog */}
+        <OptionsDialog
+          open={showOptions}
+          onOpenChange={setShowOptions}
+          options={options}
+          onOptionsChange={handleOptionsChange}
+          prompt={currentPrompt}
+          images={currentImages}
+        />
+
+        {/* Login dialog */}
+        <LoginDialog open={showLoginDialog} onOpenChange={setShowLoginDialog} />
+
+        {/* Saved models dialog */}
+        <SavedModelsDialog open={showSavedModels} onOpenChange={setShowSavedModels} onLoadModel={handleLoadModel} />
+
+        {/* Save model dialog */}
+        <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
+          <DialogContent className="sm:max-w-md bg-gradient-to-br from-slate-900/95 via-gray-900/95 to-slate-800/95 backdrop-blur-xl border-white/20 shadow-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold bg-gradient-to-r from-white via-blue-200 to-purple-200 bg-clip-text text-transparent">
+                Save 3D Model
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="model-name" className="text-white font-medium">
+                  Model Name
+                </Label>
+                <Input
+                  id="model-name"
+                  placeholder="Enter a name for your model"
+                  value={saveModelName}
+                  onChange={(e) => setSaveModelName(e.target.value)}
+                  className="bg-slate-700/50 border-slate-600 text-white placeholder:text-gray-400 focus:border-blue-500 focus:ring-blue-500/20"
+                  disabled={isSaving}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-white font-medium text-sm">Model Details</Label>
+                <div className="bg-slate-800/50 rounded-lg p-3 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Prompt:</span>
+                    <span className="text-white text-right max-w-[200px] truncate">{currentPrompt}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Quality:</span>
+                    <span className="text-white">{options.quality.toUpperCase()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Format:</span>
+                    <span className="text-white">{options.geometry_file_format.toUpperCase()}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  onClick={() => setShowSaveDialog(false)}
+                  variant="outline"
+                  className="flex-1 bg-slate-700/50 border-slate-600 text-gray-300 hover:bg-slate-600/50 hover:text-white"
+                  disabled={isSaving}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSaveConfirm}
+                  disabled={!saveModelName.trim() || isSaving}
+                  className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white disabled:opacity-50"
+                >
+                  {isSaving ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Save Model
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
-          )}
-        </div>
-      </SidebarProvider>
+          </DialogContent>
+        </Dialog>
+
+        {/* Info modal */}
+        {showInfo && (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <Card className="bg-slate-900/95 border-white/20 backdrop-blur-xl max-w-md w-full">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold text-white">About This App</h3>
+                  <Button
+                    onClick={() => setShowInfo(false)}
+                    variant="ghost"
+                    size="icon"
+                    className="text-gray-400 hover:text-white rounded-lg"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="space-y-3 text-gray-300 text-sm">
+                  <p>
+                    This 3D AI Model Generator uses advanced machine learning to create high-quality 3D models from
+                    images and text descriptions.
+                  </p>
+                  <p>
+                    Features include multiple export formats, real-time preview, professional-grade quality settings,
+                    facial enhancement options for clearer eyes and features, and user accounts to save your creations.
+                  </p>
+                  <p>Built with love by Pavan.A using Next.js, Three.js, and the Hyper3D Rodin API.</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
     </TooltipProvider>
   )
 }

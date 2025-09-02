@@ -9,85 +9,78 @@ export interface AutoResizeTextareaProps extends React.TextareaHTMLAttributes<HT
 }
 
 const AutoResizeTextarea = React.forwardRef<HTMLTextAreaElement, AutoResizeTextareaProps>(
-  ({ className, minRows = 1, maxRows = 10, value, onChange, ...props }, ref) => {
+  ({ className, minRows = 3, maxRows = 12, value, onChange, style, ...props }, ref) => {
     const textareaRef = React.useRef<HTMLTextAreaElement>(null)
-    const [internalValue, setInternalValue] = React.useState(value || props.defaultValue || "")
-    const resizeTimeoutRef = React.useRef<NodeJS.Timeout>()
+    const [internalValue, setInternalValue] = React.useState<string>(
+      (typeof value === "string" ? value : (props.defaultValue as string)) || "",
+    )
+
+    const resizeTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
     const isResizingRef = React.useRef(false)
 
-    React.useImperativeHandle(ref, () => textareaRef.current!)
+    React.useImperativeHandle(ref, () => textareaRef.current as HTMLTextAreaElement)
 
-    // Debounced resize function to prevent ResizeObserver loop
-    const debouncedResize = React.useCallback(() => {
-      if (resizeTimeoutRef.current) {
-        clearTimeout(resizeTimeoutRef.current)
+    const safeResize = React.useCallback(() => {
+      if (isResizingRef.current) return
+
+      const el = textareaRef.current
+      if (!el) return
+
+      try {
+        isResizingRef.current = true
+        // Defer to next frame to avoid sync layout thrash with ResizeObserver
+        requestAnimationFrame(() => {
+          try {
+            el.style.height = "auto"
+
+            const computed = getComputedStyle(el)
+            const lineHeight = Number.parseInt(computed.lineHeight || "20", 10) || 20
+            const minHeight = lineHeight * minRows
+            const maxHeight = lineHeight * maxRows
+
+            const newHeight = Math.min(Math.max(el.scrollHeight, minHeight), maxHeight)
+            el.style.height = `${newHeight}px`
+          } catch (err) {
+            // Swallow non-fatal issues in measurement
+            // eslint-disable-next-line no-console
+            console.warn("AutoResizeTextarea resize error:", err)
+          } finally {
+            isResizingRef.current = false
+          }
+        })
+      } catch (err) {
+        isResizingRef.current = false
       }
-
-      resizeTimeoutRef.current = setTimeout(() => {
-        if (isResizingRef.current) return
-
-        const textarea = textareaRef.current
-        if (!textarea) return
-
-        try {
-          isResizingRef.current = true
-
-          // Use requestAnimationFrame to avoid layout thrashing
-          requestAnimationFrame(() => {
-            try {
-              textarea.style.height = "auto"
-              const scrollHeight = textarea.scrollHeight
-              const lineHeight = Number.parseInt(getComputedStyle(textarea).lineHeight) || 20
-              const minHeight = lineHeight * minRows
-              const maxHeight = lineHeight * maxRows
-
-              const newHeight = Math.min(Math.max(scrollHeight, minHeight), maxHeight)
-              textarea.style.height = `${newHeight}px`
-            } catch (error) {
-              console.warn("Error resizing textarea:", error)
-            } finally {
-              isResizingRef.current = false
-            }
-          })
-        } catch (error) {
-          console.warn("Error in resize operation:", error)
-          isResizingRef.current = false
-        }
-      }, 16) // ~60fps
     }, [minRows, maxRows])
 
-    // Effect to handle value changes
+    const debouncedResize = React.useCallback(() => {
+      if (resizeTimeoutRef.current) clearTimeout(resizeTimeoutRef.current)
+      // ~60fps cadence
+      resizeTimeoutRef.current = setTimeout(safeResize, 16)
+    }, [safeResize])
+
+    // Controlled value changes
     React.useEffect(() => {
-      if (value !== undefined) {
-        setInternalValue(value)
+      if (typeof value !== "undefined") {
+        setInternalValue(value as string)
         debouncedResize()
       }
-    }, [value, debouncedResize])
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [value])
 
-    // Initial resize on mount
+    // Initial mount sizing
     React.useEffect(() => {
       debouncedResize()
-    }, [debouncedResize])
-
-    // Cleanup timeout on unmount
-    React.useEffect(() => {
+      // Cleanup on unmount
       return () => {
-        if (resizeTimeoutRef.current) {
-          clearTimeout(resizeTimeoutRef.current)
-        }
+        if (resizeTimeoutRef.current) clearTimeout(resizeTimeoutRef.current)
       }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      const newValue = e.target.value
-      setInternalValue(newValue)
-
-      // Call parent onChange if provided
-      if (onChange) {
-        onChange(e)
-      }
-
-      // Debounce the resize operation
+      setInternalValue(e.target.value)
+      onChange?.(e)
       debouncedResize()
     }
 
@@ -95,15 +88,17 @@ const AutoResizeTextarea = React.forwardRef<HTMLTextAreaElement, AutoResizeTexta
       <textarea
         ref={textareaRef}
         className={cn(
-          "flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none overflow-hidden transition-all duration-200",
+          "flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none overflow-hidden transition-all",
           className,
         )}
-        value={value !== undefined ? value : internalValue}
-        onChange={handleChange}
+        // Provide explicit min/max heights derived from minRows/maxRows to keep observers stable
         style={{
-          minHeight: `${20 * minRows}px`,
-          maxHeight: `${20 * maxRows}px`,
+          minHeight: `${minRows * 20}px`,
+          maxHeight: `${maxRows * 20}px`,
+          ...style,
         }}
+        value={typeof value !== "undefined" ? (value as string) : internalValue}
+        onChange={handleChange}
         {...props}
       />
     )
