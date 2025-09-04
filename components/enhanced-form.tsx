@@ -422,37 +422,74 @@ export default function EnhancedForm({ isLoading = false, onSubmit, onOpenOption
             <Form {...form}>
               <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-10">
                 {/* Quality Preset Selector */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <Target className="h-5 w-5 text-blue-400" />
-                    <h3 className="text-xl font-semibold text-white">Quick Setup</h3>
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                        <Target className="h-5 w-5 text-blue-400" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-semibold text-white">Quality Presets</h3>
+                        <p className="text-sm text-gray-400">Choose an optimized configuration for your use case</p>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="bg-slate-800/50 text-gray-300 border-slate-600/50">
+                      6 Presets Available
+                    </Badge>
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
                     {Object.entries({
-                      "web-optimized": { icon: Globe, label: "Web", color: "blue" },
-                      "mobile-friendly": { icon: Smartphone, label: "Mobile", color: "green" },
-                      "desktop-quality": { icon: Monitor, label: "Desktop", color: "purple" },
-                      "vr-ready": { icon: Gamepad2, label: "VR/AR", color: "cyan" },
-                      "print-quality": { icon: Printer, label: "3D Print", color: "orange" },
-                      cinematic: { icon: Film, label: "Cinema", color: "pink" },
-                    }).map(([preset, { icon: Icon, label, color }]) => (
-                      <Button
-                        key={preset}
-                        type="button"
-                        onClick={() => applyQualityPreset(preset)}
-                        variant={form.watch("quality_preset") === preset ? "default" : "outline"}
-                        className={cn(
-                          "flex flex-col items-center gap-2 h-auto py-4 transition-all duration-300",
-                          form.watch("quality_preset") === preset
-                            ? `bg-${color}-500/20 border-${color}-500/50 text-${color}-300`
-                            : "border-white/20 text-white/80 hover:bg-white/10",
-                        )}
-                      >
-                        <Icon className="h-5 w-5" />
-                        <span className="text-xs font-medium">{label}</span>
-                      </Button>
-                    ))}
+                      "web-optimized": { icon: Globe, label: "Web", color: "blue", desc: "Fast loading" },
+                      "mobile-friendly": { icon: Smartphone, label: "Mobile", color: "green", desc: "Lightweight" },
+                      "desktop-quality": { icon: Monitor, label: "Desktop", color: "purple", desc: "High quality" },
+                      "vr-ready": { icon: Gamepad2, label: "VR/AR", color: "cyan", desc: "90fps ready" },
+                      "print-quality": { icon: Printer, label: "3D Print", color: "orange", desc: "Ultra detail" },
+                      cinematic: { icon: Film, label: "Cinema", color: "pink", desc: "Film quality" },
+                    }).map(([preset, { icon: Icon, label, color, desc }]) => {
+                      const isSelected = form.watch("quality_preset") === preset
+                      return (
+                        <Button
+                          key={preset}
+                          type="button"
+                          onClick={() => applyQualityPreset(preset)}
+                          variant={isSelected ? "default" : "outline"}
+                          className={cn(
+                            "flex flex-col items-center gap-3 h-auto py-5 px-4 transition-all duration-300 group relative overflow-hidden",
+                            "bg-slate-800/40 border-slate-700/60 hover:bg-slate-700/60 hover:border-slate-600/80",
+                            "backdrop-blur-sm shadow-lg hover:shadow-xl",
+                            isSelected && [
+                              "bg-gradient-to-br from-blue-600/20 to-purple-600/20",
+                              "border-blue-500/50 shadow-blue-500/20",
+                              "text-blue-100",
+                            ],
+                          )}
+                        >
+                          {/* Background glow effect for selected state */}
+                          {isSelected && (
+                            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-lg" />
+                          )}
+
+                          <div className="relative z-10 flex flex-col items-center gap-3">
+                            <div
+                              className={cn(
+                                "p-3 rounded-xl transition-all duration-300 group-hover:scale-110",
+                                isSelected
+                                  ? "bg-blue-500/20 shadow-lg shadow-blue-500/20"
+                                  : "bg-slate-700/50 group-hover:bg-slate-600/60",
+                              )}
+                            >
+                              <Icon className="h-6 w-6" />
+                            </div>
+
+                            <div className="text-center">
+                              <div className="font-semibold text-sm mb-1">{label}</div>
+                              <div className="text-xs opacity-75 leading-tight">{desc}</div>
+                            </div>
+                          </div>
+                        </Button>
+                      )
+                    })}
                   </div>
                 </div>
 
