@@ -185,10 +185,9 @@ export default function AdvancedLoadingScreen({ isLoading, jobStatuses, currentS
         <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:60px_60px] opacity-50" />
       </div>
 
-      {/* Main loading content */}
-      <div className="relative z-10 w-full max-w-2xl mx-auto px-6">
-        <Card className="bg-black/70 border-white/20 backdrop-blur-xl shadow-2xl">
-          <CardContent className="p-8">
+      <div className="relative z-10 w-full max-w-2xl mx-auto px-4 sm:px-6 py-8 flex items-center justify-center min-h-screen">
+        <Card className="bg-black/70 border-white/20 backdrop-blur-xl shadow-2xl w-full">
+          <CardContent className="p-8 sm:p-12">
             {/* Header with current stage */}
             <div className="text-center mb-8">
               <div className="flex items-center justify-center mb-6">

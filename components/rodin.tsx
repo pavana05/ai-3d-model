@@ -423,69 +423,69 @@ export default function Rodin() {
   return (
     <TooltipProvider>
       <div className="relative min-h-screen w-full overflow-hidden">
-        {/* Enhanced animated background */}
         <div className={`fixed inset-0 transition-all duration-[8000ms] ${backgroundEffects[backgroundEffect]}`}>
           <div className="absolute inset-0 bg-black/40" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_25%,rgba(59,130,246,0.1)_0%,transparent_50%),radial-gradient(circle_at_75%_75%,rgba(147,51,234,0.1)_0%,transparent_50%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_25%,rgba(59,130,246,0.12)_0%,transparent_50%),radial-gradient(circle_at_75%_75%,rgba(147,51,234,0.12)_0%,transparent_50%)]" />
           <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:60px_60px] opacity-30" />
         </div>
 
-        {/* Professional header */}
-        <header className="relative z-20 bg-black/20 backdrop-blur-xl border-b border-white/10 sticky top-0">
+        <header className="relative z-20 bg-black/30 backdrop-blur-2xl border-b border-white/10 sticky top-0 shadow-lg">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-16 sm:h-20">
               {/* Logo section */}
               <div className="flex-1">
                 <div className="flex items-center gap-3 sm:gap-4">
-                  <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-r from-blue-500/20 to-purple-500/20 backdrop-blur-sm border border-white/10 flex-shrink-0">
+                  <div className="p-2.5 sm:p-3 rounded-xl bg-gradient-to-r from-blue-500/20 to-purple-500/20 backdrop-blur-sm border border-white/10 flex-shrink-0 hover:border-white/20 transition-all duration-300">
                     <Grid3X3 className="h-5 w-5 sm:h-6 sm:w-6 text-blue-400" />
                   </div>
                   <div className="min-w-0">
-                    <h1 className="text-lg sm:text-xl lg:text-2xl text-white font-bold bg-gradient-to-r from-white via-blue-200 to-purple-200 bg-clip-text text-transparent">
+                    <h1 className="text-lg sm:text-xl lg:text-2xl text-white font-bold tracking-tight bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent line-clamp-1">
                       3D AI Model Generator
                     </h1>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <p className="text-gray-400 text-xs sm:text-sm">Made with ❤️ by Pavan.A</p>
+                      <p className="text-gray-400 text-xs sm:text-sm font-medium">Professional AI-Powered Modeling</p>
                       <Badge
                         variant="outline"
-                        className="text-xs bg-blue-900/50 text-blue-300 border-blue-500/30 hidden sm:inline-flex"
+                        className="text-xs bg-blue-900/40 text-blue-200 border-blue-500/40 hidden sm:inline-flex font-medium"
                       >
-                        AI Powered
+                        Enterprise
                       </Badge>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Desktop navigation */}
               {!isMobile && (
                 <div className="flex items-center gap-4">
                   <ExternalLinks />
-                  <Separator orientation="vertical" className="h-6 bg-white/20" />
+                  <Separator orientation="vertical" className="h-6 bg-white/10" />
                   <div className="flex items-center gap-2">
                     {user ? (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
                             variant="ghost"
-                            className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg flex items-center gap-2 px-3"
+                            className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg flex items-center gap-2.5 px-3 py-2 transition-all duration-300 group"
                           >
-                            <div className="w-6 h-6 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
+                            <div className="w-6 h-6 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center group-hover:shadow-lg group-hover:shadow-blue-500/50 transition-all duration-300">
                               <User className="h-3 w-3 text-white" />
                             </div>
-                            <span className="text-sm">{user.name}</span>
+                            <span className="text-sm font-medium">{user.name}</span>
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent className="bg-slate-900/95 border-white/20 backdrop-blur-xl">
+                        <DropdownMenuContent className="bg-slate-900/95 border-white/10 backdrop-blur-xl shadow-2xl">
                           <DropdownMenuItem
                             onClick={() => setShowSavedModels(true)}
-                            className="text-white hover:bg-white/10"
+                            className="text-white hover:bg-white/10 focus:bg-white/10 cursor-pointer"
                           >
                             <Folder className="h-4 w-4 mr-2" />
                             My Models
                           </DropdownMenuItem>
-                          <DropdownMenuSeparator className="bg-white/20" />
-                          <DropdownMenuItem onClick={logout} className="text-red-400 hover:bg-red-500/10">
+                          <DropdownMenuSeparator className="bg-white/10" />
+                          <DropdownMenuItem
+                            onClick={logout}
+                            className="text-red-400 hover:bg-red-500/10 focus:bg-red-500/10 cursor-pointer"
+                          >
                             <LogOut className="h-4 w-4 mr-2" />
                             Sign Out
                           </DropdownMenuItem>
@@ -495,10 +495,10 @@ export default function Rodin() {
                       <Button
                         onClick={() => setShowLoginDialog(true)}
                         variant="ghost"
-                        className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg flex items-center gap-2"
+                        className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg flex items-center gap-2 py-2 transition-all duration-300"
                       >
                         <User className="h-4 w-4" />
-                        <span>Sign In</span>
+                        <span className="text-sm font-medium">Sign In</span>
                       </Button>
                     )}
 
@@ -508,13 +508,13 @@ export default function Rodin() {
                           variant="ghost"
                           size="icon"
                           onClick={() => setShowInfo(!showInfo)}
-                          className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg"
+                          className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-300"
                         >
                           <Info className="h-4 w-4" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>About this app</p>
+                        <p>About this application</p>
                       </TooltipContent>
                     </Tooltip>
                   </div>
@@ -547,7 +547,7 @@ export default function Rodin() {
                           <div className="w-6 h-6 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
                             <User className="h-3 w-3 text-white" />
                           </div>
-                          <span className="text-sm">{user.name}</span>
+                          <span className="text-sm font-medium">{user.name}</span>
                         </div>
                         <Button
                           variant="ghost"
@@ -608,7 +608,6 @@ export default function Rodin() {
           </div>
         </header>
 
-        {/* Main content */}
         <main className="relative flex-1">
           {/* 3D Viewer */}
           <div
@@ -636,7 +635,7 @@ export default function Rodin() {
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>{isLiked ? "Unlike" : "Like"} this model</p>
+                    <p>Like this model</p>
                   </TooltipContent>
                 </Tooltip>
 
