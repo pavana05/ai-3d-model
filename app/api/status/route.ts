@@ -40,9 +40,9 @@ export async function POST(request: Request) {
       jobs: [
         {
           uuid: subscription_key,
-          status: "Succeeded",
+          status: "Done",
           result: {
-            model_url: `https://cdn.jsdelivr.net/npm/three@r128/examples/models/gltf/Duck/glTF/Duck.gltf`,
+            model_url: `https://cdn.jsdelivr.net/npm/three@r128/examples/models/gltf/Duck/glTF/Duck.glb`,
             preview: `https://via.placeholder.com/200?text=Generated+Model`,
           },
         },

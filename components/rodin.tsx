@@ -133,8 +133,14 @@ export default function Rodin() {
   async function handleStatusCheck(subscriptionKey: string, taskUuid: string) {
     try {
       setIsPolling(true)
+      
+      // Validate required data before checking status
+      if (!subscriptionKey || subscriptionKey.trim() === "") {
+        throw new Error("Missing subscription key for status check")
+      }
+      
       const data = await checkJobStatus(subscriptionKey)
-      console.log("Status response:", data)
+      console.log("[v0] Status response:", data)
 
       if (!data.jobs || !Array.isArray(data.jobs) || data.jobs.length === 0) {
         throw new Error("No jobs found in status response")
@@ -147,53 +153,50 @@ export default function Rodin() {
 
       if (allJobsDone) {
         setIsPolling(false)
+        
+        // Extract model URL from the first successful job
+        const successfulJob = data.jobs.find((job: any) => job.status === "Done" && job.result?.model_url)
+        if (successfulJob?.result?.model_url) {
+          setModelUrl(successfulJob.result.model_url)
+          console.log("[v0] Model URL extracted:", successfulJob.result.model_url)
+        } else {
+          console.warn("[v0] No model URL found in successful job")
+        }
 
         setTimeout(async () => {
           try {
             const downloadData = await downloadModel(taskUuid)
-            console.log("Download response:", downloadData)
+            console.log("[v0] Download response:", downloadData)
 
             if (downloadData.error && downloadData.error !== "OK") {
               throw new Error(`Download error: ${downloadData.error}`)
             }
 
-            if (downloadData.list && downloadData.list.length > 0) {
-              console.log("Files available for download:", downloadData.list)
+            // Handle direct download_url or model_url from response
+            let modelDownloadUrl = downloadData.download_url || downloadData.model_url
+            
+            if (!modelDownloadUrl && downloadData.list && downloadData.list.length > 0) {
+              // Fallback: extract from file list if available
+              console.log("[v0] Files available for download:", downloadData.list)
               const glbFile = downloadData.list.find((file: { name: string }) =>
                 file.name.toLowerCase().endsWith(".glb"),
               )
 
               if (glbFile) {
-                console.log("Found GLB file:", glbFile)
-                const proxyUrl = `/api/proxy-download?url=${encodeURIComponent(glbFile.url)}`
-                console.log("Using proxy URL:", proxyUrl)
-
-                try {
-                  const testResponse = await fetch(proxyUrl, { method: "HEAD" })
-                  if (testResponse.ok) {
-                    console.log("Proxy URL is accessible")
-                    setModelUrl(proxyUrl)
-                    setDownloadUrl(glbFile.url)
-                    setIsLoading(false)
-                    setShowPromptContainer(false)
-                  } else {
-                    throw new Error(`Proxy returned ${testResponse.status}`)
-                  }
-                } catch (proxyError) {
-                  console.error("Proxy test failed:", proxyError)
-                  console.log("Trying direct URL as fallback")
-                  setModelUrl(glbFile.url)
-                  setDownloadUrl(glbFile.url)
-                  setIsLoading(false)
-                  setShowPromptContainer(false)
-                }
-              } else {
-                console.error("No GLB file found in the results. Available files:", downloadData.list)
-                setError("No GLB file found in the results. Please check the console for details.")
-                setIsLoading(false)
+                modelDownloadUrl = glbFile.url
+                console.log("[v0] Found GLB file:", glbFile)
               }
+            }
+
+            if (modelDownloadUrl) {
+              console.log("[v0] Setting model URL to:", modelDownloadUrl)
+              setModelUrl(modelDownloadUrl)
+              setDownloadUrl(modelDownloadUrl)
+              setIsLoading(false)
+              setShowPromptContainer(false)
             } else {
-              setError("No files available for download")
+              console.error("[v0] No model URL found in download response:", downloadData)
+              setError("Failed to obtain model download URL. Please try again.")
               setIsLoading(false)
             }
           } catch (downloadErr) {
@@ -253,15 +256,25 @@ export default function Rodin() {
       })
 
       const data = await submitRodinJob(formData)
-      console.log("Generation response:", data)
+      console.log("[v0] Generation response:", data)
       setResult(data)
 
-      if (data.jobs && data.jobs.subscription_key && data.uuid) {
-        handleStatusCheck(data.jobs.subscription_key, data.uuid)
-      } else {
-        setError("Missing required data for status checking")
+      // Validate response structure before proceeding
+      const subscriptionKey = data?.jobs?.subscription_key
+      const uuid = data?.uuid
+
+      if (!subscriptionKey || !uuid) {
+        console.error("[v0] Invalid response structure:", { subscriptionKey, uuid, fullResponse: data })
+        const missingFields = []
+        if (!subscriptionKey) missingFields.push("subscription_key")
+        if (!uuid) missingFields.push("uuid")
+        setError(`Generation failed: Missing required data (${missingFields.join(", ")})`)
         setIsLoading(false)
+        return
       }
+
+      console.log("[v0] Starting status check with:", { subscriptionKey, uuid })
+      handleStatusCheck(subscriptionKey, uuid)
     } catch (err) {
       console.error("Submit error:", err)
       setError(err instanceof Error ? err.message : "An unknown error occurred")

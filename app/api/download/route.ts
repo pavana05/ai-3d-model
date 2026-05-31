@@ -38,8 +38,9 @@ export async function POST(request: Request) {
     // Provide a real 3D model URL for testing
     const mockResponse = {
       download_url: "https://cdn.jsdelivr.net/npm/three@r128/examples/models/gltf/Duck/glTF/Duck.glb",
+      model_url: "https://cdn.jsdelivr.net/npm/three@r128/examples/models/gltf/Duck/glTF/Duck.glb",
       model_name: "generated-model.glb",
-      status: "Succeeded",
+      status: "Done",
     }
 
     console.log("Using mock response for download")
