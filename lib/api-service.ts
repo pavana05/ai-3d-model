@@ -1,14 +1,24 @@
 export async function submitRodinJob(formData: FormData) {
-  const response = await fetch("/api/rodin", {
-    method: "POST",
-    body: formData,
-  })
+  try {
+    console.log("[v0] Submitting generation job...")
+    const response = await fetch("/api/rodin", {
+      method: "POST",
+      body: formData,
+    })
 
-  if (!response.ok) {
-    throw new Error(`API request failed: ${response.status}`)
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error("[v0] API error response:", errorText)
+      throw new Error(`API request failed: ${response.status} - ${errorText}`)
+    }
+
+    const data = await response.json()
+    console.log("[v0] API response received:", data)
+    return data
+  } catch (error) {
+    console.error("[v0] submitRodinJob error:", error)
+    throw error
   }
-
-  return await response.json()
 }
 
 export async function checkJobStatus(subscriptionKey: string) {

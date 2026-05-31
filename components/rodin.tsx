@@ -276,8 +276,10 @@ export default function Rodin() {
       console.log("[v0] Starting status check with:", { subscriptionKey, uuid })
       handleStatusCheck(subscriptionKey, uuid)
     } catch (err) {
-      console.error("Submit error:", err)
-      setError(err instanceof Error ? err.message : "An unknown error occurred")
+      console.error("[v0] Submit error:", err)
+      const errorMessage = err instanceof Error ? err.message : "An unknown error occurred"
+      console.error("[v0] Error details:", errorMessage)
+      setError(errorMessage)
       setIsLoading(false)
     }
   }
