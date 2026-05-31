@@ -1,24 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-
-// Simple in-memory storage (replace with database in production)
-const savedModels: Array<{
-  id: string
-  userId: string
-  name: string
-  prompt: string
-  modelUrl: string
-  createdAt: string
-}> = []
-
-// Simple token verification (replace with JWT in production)
-function verifyToken(token: string): string | null {
-  try {
-    const payload = JSON.parse(atob(token))
-    return payload.userId
-  } catch {
-    return null
-  }
-}
+import { createServerClient } from "@supabase/ssr"
 
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -28,23 +9,44 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     }
 
     const token = authHeader.substring(7)
-    const userId = verifyToken(token)
+    let userId: string
 
-    if (!userId) {
+    try {
+      const payload = JSON.parse(Buffer.from(token, "base64").toString())
+      userId = payload.userId
+    } catch {
       return NextResponse.json({ success: false, error: "Invalid token" }, { status: 401 })
     }
 
-    const modelId = params.id
+    const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+      cookies: {
+        getAll: () => [],
+        setAll: () => {},
+      },
+    })
 
-    // Find the model
-    const modelIndex = savedModels.findIndex((model) => model.id === modelId && model.userId === userId)
+    // Verify the model belongs to the user
+    const { data: model, error: fetchError } = await supabase
+      .from("saved_models")
+      .select("user_id")
+      .eq("id", params.id)
+      .single()
 
-    if (modelIndex === -1) {
+    if (fetchError || !model) {
       return NextResponse.json({ success: false, error: "Model not found" }, { status: 404 })
     }
 
-    // Remove the model
-    savedModels.splice(modelIndex, 1)
+    if (model.user_id !== userId) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 403 })
+    }
+
+    // Delete the model
+    const { error: deleteError } = await supabase.from("saved_models").delete().eq("id", params.id)
+
+    if (deleteError) {
+      console.error("Delete model error:", deleteError)
+      return NextResponse.json({ success: false, error: "Failed to delete model" }, { status: 400 })
+    }
 
     return NextResponse.json({
       success: true,

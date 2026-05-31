@@ -1,24 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-
-// Simple in-memory storage (replace with database in production)
-const savedModels: Array<{
-  id: string
-  userId: string
-  name: string
-  prompt: string
-  modelUrl: string
-  createdAt: string
-}> = []
-
-// Simple token verification (replace with JWT in production)
-function verifyToken(token: string): string | null {
-  try {
-    const payload = JSON.parse(atob(token))
-    return payload.userId
-  } catch {
-    return null
-  }
-}
+import { createServerClient } from "@supabase/ssr"
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,25 +9,44 @@ export async function GET(request: NextRequest) {
     }
 
     const token = authHeader.substring(7)
-    const userId = verifyToken(token)
+    let userId: string
 
-    if (!userId) {
+    try {
+      const payload = JSON.parse(Buffer.from(token, "base64").toString())
+      userId = payload.userId
+    } catch {
       return NextResponse.json({ success: false, error: "Invalid token" }, { status: 401 })
     }
 
-    // Get user's saved models
-    const userModels = savedModels
-      .filter((model) => model.userId === userId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+      cookies: {
+        getAll: () => [],
+        setAll: () => {},
+      },
+    })
+
+    const { data: models, error } = await supabase
+      .from("saved_models")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+
+    if (error) {
+      console.error("List models error:", error)
+      return NextResponse.json({ success: false, error: "Failed to fetch models" }, { status: 400 })
+    }
 
     return NextResponse.json({
       success: true,
-      models: userModels.map((model) => ({
+      models: (models || []).map((model: any) => ({
         id: model.id,
         name: model.name,
         prompt: model.prompt,
-        modelUrl: model.modelUrl,
-        createdAt: model.createdAt,
+        modelUrl: model.model_url,
+        createdAt: model.created_at,
+        quality: model.quality,
+        format: model.format,
+        description: model.description,
       })),
     })
   } catch (error) {

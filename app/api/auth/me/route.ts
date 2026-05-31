@@ -1,22 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-
-// Simple in-memory storage (replace with database in production)
-const users: Array<{
-  id: string
-  name: string
-  email: string
-  password: string
-}> = []
-
-// Simple token verification (replace with JWT in production)
-function verifyToken(token: string): string | null {
-  try {
-    const payload = JSON.parse(atob(token))
-    return payload.userId
-  } catch {
-    return null
-  }
-}
+import { createServerClient } from "@supabase/ssr"
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,24 +9,31 @@ export async function GET(request: NextRequest) {
     }
 
     const token = authHeader.substring(7)
-    const userId = verifyToken(token)
+    let userId: string
 
-    if (!userId) {
+    try {
+      const payload = JSON.parse(Buffer.from(token, "base64").toString())
+      userId = payload.userId
+    } catch {
       return NextResponse.json({ success: false, error: "Invalid token" }, { status: 401 })
     }
 
-    const user = users.find((user) => user.id === userId)
-    if (!user) {
+    const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+      cookies: {
+        getAll: () => [],
+        setAll: () => {},
+      },
+    })
+
+    const { data: user, error } = await supabase.from("users").select("id, name, email").eq("id", userId).single()
+
+    if (error || !user) {
       return NextResponse.json({ success: false, error: "User not found" }, { status: 404 })
     }
 
     return NextResponse.json({
       success: true,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-      },
+      user,
     })
   } catch (error) {
     console.error("Auth verification error:", error)

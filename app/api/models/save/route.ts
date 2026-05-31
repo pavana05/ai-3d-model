@@ -1,24 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-
-// Simple in-memory storage (replace with database in production)
-const savedModels: Array<{
-  id: string
-  userId: string
-  name: string
-  prompt: string
-  modelUrl: string
-  createdAt: string
-}> = []
-
-// Simple token verification (replace with JWT in production)
-function verifyToken(token: string): string | null {
-  try {
-    const payload = JSON.parse(atob(token))
-    return payload.userId
-  } catch {
-    return null
-  }
-}
+import { createServerClient } from "@supabase/ssr"
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,40 +9,55 @@ export async function POST(request: NextRequest) {
     }
 
     const token = authHeader.substring(7)
-    const userId = verifyToken(token)
+    let userId: string
 
-    if (!userId) {
+    try {
+      const payload = JSON.parse(Buffer.from(token, "base64").toString())
+      userId = payload.userId
+    } catch {
       return NextResponse.json({ success: false, error: "Invalid token" }, { status: 401 })
     }
 
-    const { name, prompt, modelUrl } = await request.json()
+    const { name, prompt, modelUrl, quality, format, description } = await request.json()
 
-    // Validation
     if (!name || !prompt || !modelUrl) {
-      return NextResponse.json({ success: false, error: "All fields are required" }, { status: 400 })
+      return NextResponse.json({ success: false, error: "All required fields must be provided" }, { status: 400 })
     }
 
-    // Create new saved model
-    const modelId = Date.now().toString()
-    const newModel = {
-      id: modelId,
-      userId,
-      name,
-      prompt,
-      modelUrl,
-      createdAt: new Date().toISOString(),
-    }
+    const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+      cookies: {
+        getAll: () => [],
+        setAll: () => {},
+      },
+    })
 
-    savedModels.push(newModel)
+    const { data: savedModel, error } = await supabase
+      .from("saved_models")
+      .insert({
+        user_id: userId,
+        name,
+        prompt,
+        model_url: modelUrl,
+        quality: quality || "medium",
+        format: format || "glb",
+        description: description || "",
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error("Save model error:", error)
+      return NextResponse.json({ success: false, error: "Failed to save model" }, { status: 400 })
+    }
 
     return NextResponse.json({
       success: true,
       model: {
-        id: modelId,
-        name,
-        prompt,
-        modelUrl,
-        createdAt: newModel.createdAt,
+        id: savedModel.id,
+        name: savedModel.name,
+        prompt: savedModel.prompt,
+        modelUrl: savedModel.model_url,
+        createdAt: savedModel.created_at,
       },
     })
   } catch (error) {

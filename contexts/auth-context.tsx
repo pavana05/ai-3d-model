@@ -65,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
+      console.log("[v0] Login attempt:", email)
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: {
@@ -74,6 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
 
       const data = await response.json()
+      console.log("[v0] Login response:", data)
 
       if (data.success) {
         localStorage.setItem("auth_token", data.token)
@@ -83,12 +85,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { success: false, error: data.error }
       }
     } catch (error) {
-      return { success: false, error: "Network error" }
+      console.error("[v0] Login network error:", error)
+      return { success: false, error: "Network error - please check your connection" }
     }
   }
 
   const signup = async (name: string, email: string, password: string) => {
     try {
+      console.log("[v0] Signup attempt:", email)
       const response = await fetch("/api/auth/signup", {
         method: "POST",
         headers: {
@@ -98,6 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
 
       const data = await response.json()
+      console.log("[v0] Signup response:", data)
 
       if (data.success) {
         localStorage.setItem("auth_token", data.token)
@@ -107,7 +112,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { success: false, error: data.error }
       }
     } catch (error) {
-      return { success: false, error: "Network error" }
+      console.error("[v0] Signup network error:", error)
+      return { success: false, error: "Network error - please check your connection" }
     }
   }
 

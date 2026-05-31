@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Link from "next/link"
 import {
   ExternalLink,
   Download,
@@ -39,11 +40,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useAuth } from "@/contexts/auth-context"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/contexts/auth-context"
 
 export default function Rodin() {
   const [isLoading, setIsLoading] = useState(false)
@@ -71,7 +72,6 @@ export default function Rodin() {
   const { user, logout, saveModel } = useAuth()
   const { toast } = useToast()
 
-  // Enhanced background animation
   useEffect(() => {
     const interval = setInterval(() => {
       setBackgroundEffect((prev) => (prev + 1) % 3)
@@ -100,13 +100,11 @@ export default function Rodin() {
     detail_preservation: true,
     surface_refinement: false,
     micro_detail_recovery: false,
-    // Enhanced facial options
     facial_detail_enhancement: false,
     eye_clarity_boost: false,
     facial_feature_sharpening: false,
     skin_texture_enhancement: false,
     facial_symmetry_correction: false,
-    // Advanced features
     ai_upscaling: false,
     neural_enhancement: false,
     adaptive_lod: false,
@@ -135,7 +133,6 @@ export default function Rodin() {
   async function handleStatusCheck(subscriptionKey: string, taskUuid: string) {
     try {
       setIsPolling(true)
-
       const data = await checkJobStatus(subscriptionKey)
       console.log("Status response:", data)
 
@@ -168,7 +165,6 @@ export default function Rodin() {
 
               if (glbFile) {
                 console.log("Found GLB file:", glbFile)
-
                 const proxyUrl = `/api/proxy-download?url=${encodeURIComponent(glbFile.url)}`
                 console.log("Using proxy URL:", proxyUrl)
 
@@ -258,7 +254,6 @@ export default function Rodin() {
 
       const data = await submitRodinJob(formData)
       console.log("Generation response:", data)
-
       setResult(data)
 
       if (data.jobs && data.jobs.subscription_key && data.uuid) {
@@ -320,6 +315,7 @@ export default function Rodin() {
     }
 
     setIsSaving(true)
+    console.log("[v0] Starting save with:", { name: saveModelName, prompt: currentPrompt, modelUrl })
 
     try {
       const result = await saveModel({
@@ -327,6 +323,8 @@ export default function Rodin() {
         prompt: currentPrompt,
         modelUrl: modelUrl,
       })
+
+      console.log("[v0] Save result:", result)
 
       if (result.success) {
         setShowSaveDialog(false)
@@ -343,7 +341,7 @@ export default function Rodin() {
         })
       }
     } catch (error) {
-      console.error("Save model error:", error)
+      console.error("[v0] Save model error:", error)
       toast({
         title: "Save Failed",
         description: "An unexpected error occurred while saving the model.",
@@ -391,6 +389,15 @@ export default function Rodin() {
 
   const ExternalLinks = () => (
     <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-6">
+      {user && (
+        <Link
+          href="/library"
+          className="flex items-center text-white/80 hover:text-white transition-all duration-300 text-sm group"
+        >
+          <Folder className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
+          <span className="group-hover:scale-105 transition-transform">My Library</span>
+        </Link>
+      )}
       <a
         href="https://pavan-05.framer.ai/"
         target="_blank"
@@ -432,7 +439,6 @@ export default function Rodin() {
         <header className="relative z-20 bg-black/30 backdrop-blur-2xl border-b border-white/10 sticky top-0 shadow-lg">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-16 sm:h-20">
-              {/* Logo section */}
               <div className="flex-1">
                 <div className="flex items-center gap-3 sm:gap-4">
                   <div className="p-2.5 sm:p-3 rounded-xl bg-gradient-to-r from-blue-500/20 to-purple-500/20 backdrop-blur-sm border border-white/10 flex-shrink-0 hover:border-white/20 transition-all duration-300">
@@ -521,7 +527,6 @@ export default function Rodin() {
                 </div>
               )}
 
-              {/* Mobile menu button */}
               {isMobile && (
                 <Button
                   variant="ghost"
@@ -534,7 +539,6 @@ export default function Rodin() {
               )}
             </div>
 
-            {/* Mobile menu */}
             {isMobile && showMobileMenu && (
               <div className="border-t border-white/10 py-4 animate-in slide-in-from-top duration-300">
                 <div className="space-y-4">
@@ -609,7 +613,6 @@ export default function Rodin() {
         </header>
 
         <main className="relative flex-1">
-          {/* 3D Viewer */}
           <div
             className={`relative transition-all duration-700 ease-in-out ${
               showPromptContainer ? "h-[40vh] sm:h-[50vh]" : "h-[60vh] sm:h-[70vh]"
@@ -617,7 +620,6 @@ export default function Rodin() {
           >
             <ModelViewer modelUrl={isLoading ? null : modelUrl} />
 
-            {/* Floating controls when model is loaded */}
             {!isLoading && modelUrl && (
               <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
                 <Tooltip>
@@ -671,7 +673,6 @@ export default function Rodin() {
               </div>
             )}
 
-            {/* Model status indicator */}
             {!isLoading && modelUrl && (
               <div className="absolute bottom-4 left-4 z-10">
                 <Card className="bg-black/60 backdrop-blur-xl border-white/20">
@@ -689,9 +690,7 @@ export default function Rodin() {
             )}
           </div>
 
-          {/* Content section */}
           <div className="relative z-10 bg-gradient-to-t from-black via-black/95 to-transparent min-h-[60vh] sm:min-h-[50vh]">
-            {/* Error message */}
             {error && (
               <div className="p-4 animate-in slide-in-from-bottom duration-500">
                 <Card className="bg-red-900/20 border-red-500/30 shadow-xl backdrop-blur-xl max-w-4xl mx-auto">
@@ -718,29 +717,21 @@ export default function Rodin() {
               </div>
             )}
 
-            {/* Input form */}
             {showPromptContainer && (
               <div className="relative py-8 sm:py-12 lg:py-16">
-                {/* Background decorative elements */}
                 <div className="absolute inset-0 overflow-hidden pointer-events-none">
                   <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-full blur-3xl animate-pulse" />
                   <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-full blur-3xl animate-pulse delay-1000" />
                 </div>
 
                 <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-                  {/* Professional container with enhanced glass morphism */}
                   <div className="relative group">
-                    {/* Outer glow effect */}
                     <div className="absolute -inset-2 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-cyan-600/20 rounded-3xl blur-2xl opacity-60 group-hover:opacity-100 transition-all duration-700" />
 
-                    {/* Main form container */}
                     <div className="relative bg-gradient-to-br from-slate-900/95 via-gray-900/95 to-slate-800/95 backdrop-blur-3xl border border-white/20 rounded-3xl shadow-2xl overflow-hidden">
-                      {/* Top accent gradient */}
                       <div className="h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-500" />
 
-                      {/* Inner container */}
                       <div className="p-8 sm:p-12 lg:p-16">
-                        {/* Enhanced header section */}
                         <div className="text-center mb-12">
                           <div className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-gradient-to-r from-blue-500/15 to-purple-500/15 border border-blue-500/30 mb-6 backdrop-blur-sm">
                             <div className="w-3 h-3 bg-blue-400 rounded-full animate-pulse" />
@@ -757,7 +748,6 @@ export default function Rodin() {
                           </p>
                         </div>
 
-                        {/* Form component */}
                         <EnhancedForm
                           isLoading={isLoading}
                           onSubmit={handleSubmit}
@@ -765,7 +755,6 @@ export default function Rodin() {
                         />
                       </div>
 
-                      {/* Bottom accent gradient */}
                       <div className="h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-500" />
                     </div>
                   </div>
@@ -773,7 +762,6 @@ export default function Rodin() {
               </div>
             )}
 
-            {/* Model controls */}
             {!isLoading && modelUrl && !showPromptContainer && (
               <div className="p-4 sm:p-6 lg:p-8 animate-in slide-in-from-bottom duration-700">
                 <div className="max-w-4xl mx-auto">
@@ -798,12 +786,11 @@ export default function Rodin() {
                       onClick={handleSaveModel}
                       className="w-full sm:w-auto bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl px-6 py-3 flex items-center justify-center gap-3 font-medium shadow-lg hover:shadow-green-500/25 transition-all duration-300 hover:scale-105"
                     >
-                      <Save className="h-5 w-5" />
+                      <Save className="h-5 w-4" />
                       <span>{user ? "Save Model" : "Sign In to Save"}</span>
                     </Button>
                   </div>
 
-                  {/* Model statistics */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <Card className="bg-black/40 backdrop-blur-xl border-white/10">
                       <CardContent className="p-4 text-center">
@@ -836,7 +823,6 @@ export default function Rodin() {
               </div>
             )}
 
-            {/* Footer */}
             <footer className="p-6 border-t border-white/10 bg-black/40 backdrop-blur-xl">
               <div className="max-w-6xl mx-auto">
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -858,10 +844,8 @@ export default function Rodin() {
           </div>
         </main>
 
-        {/* Loading indicator */}
         <StatusIndicator isLoading={isLoading} jobStatuses={jobStatuses} />
 
-        {/* Options dialog */}
         <OptionsDialog
           open={showOptions}
           onOpenChange={setShowOptions}
@@ -871,13 +855,10 @@ export default function Rodin() {
           images={currentImages}
         />
 
-        {/* Login dialog */}
         <LoginDialog open={showLoginDialog} onOpenChange={setShowLoginDialog} />
 
-        {/* Saved models dialog */}
         <SavedModelsDialog open={showSavedModels} onOpenChange={setShowSavedModels} onLoadModel={handleLoadModel} />
 
-        {/* Save model dialog */}
         <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
           <DialogContent className="sm:max-w-md bg-gradient-to-br from-slate-900/95 via-gray-900/95 to-slate-800/95 backdrop-blur-xl border-white/20 shadow-2xl">
             <DialogHeader>
@@ -947,7 +928,6 @@ export default function Rodin() {
           </DialogContent>
         </Dialog>
 
-        {/* Info modal */}
         {showInfo && (
           <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
             <Card className="bg-slate-900/95 border-white/20 backdrop-blur-xl max-w-md w-full">

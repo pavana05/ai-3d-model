@@ -15,6 +15,8 @@ interface SavedModel {
   prompt: string
   modelUrl: string
   createdAt: string
+  quality?: string
+  format?: string
 }
 
 interface SavedModelsDialogProps {
@@ -27,6 +29,8 @@ export default function SavedModelsDialog({ open, onOpenChange, onLoadModel }: S
   const [models, setModels] = useState<SavedModel[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [sortBy, setSortBy] = useState<"recent" | "name">("recent")
 
   const { getSavedModels, deleteModel } = useAuth()
 
@@ -57,6 +61,19 @@ export default function SavedModelsDialog({ open, onOpenChange, onLoadModel }: S
     onOpenChange(false)
   }
 
+  const filteredModels = models
+    .filter(
+      (model) =>
+        model.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        model.prompt.toLowerCase().includes(searchQuery.toLowerCase()),
+    )
+    .sort((a, b) => {
+      if (sortBy === "recent") {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      }
+      return a.name.localeCompare(b.name)
+    })
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
@@ -76,13 +93,31 @@ export default function SavedModelsDialog({ open, onOpenChange, onLoadModel }: S
           </DialogTitle>
         </DialogHeader>
 
+        <div className="flex gap-2 items-center">
+          <input
+            type="text"
+            placeholder="Search models..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="flex-1 px-3 py-2 bg-slate-700/50 border border-slate-600 text-white placeholder:text-gray-400 rounded-lg focus:border-blue-500 focus:outline-none"
+          />
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as "recent" | "name")}
+            className="px-3 py-2 bg-slate-700/50 border border-slate-600 text-white rounded-lg focus:border-blue-500 focus:outline-none text-sm"
+          >
+            <option value="recent">Recent</option>
+            <option value="name">Name</option>
+          </select>
+        </div>
+
         <ScrollArea className="max-h-[60vh] pr-4">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
               <span className="ml-2 text-gray-400">Loading your models...</span>
             </div>
-          ) : models.length === 0 ? (
+          ) : filteredModels.length === 0 ? (
             <div className="text-center py-12">
               <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-blue-500/20 to-purple-500/20 flex items-center justify-center">
                 <Eye className="h-8 w-8 text-gray-400" />
@@ -92,7 +127,7 @@ export default function SavedModelsDialog({ open, onOpenChange, onLoadModel }: S
             </div>
           ) : (
             <div className="space-y-4">
-              {models.map((model) => (
+              {filteredModels.map((model) => (
                 <Card
                   key={model.id}
                   className="bg-slate-800/40 border-slate-700 hover:border-slate-600 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10"
@@ -102,11 +137,14 @@ export default function SavedModelsDialog({ open, onOpenChange, onLoadModel }: S
                       <div className="flex-1 min-w-0">
                         <h3 className="text-lg font-semibold text-white mb-2 truncate">{model.name}</h3>
                         <p className="text-gray-400 text-sm mb-3 line-clamp-2">{model.prompt}</p>
-                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <div className="flex items-center gap-2 text-xs text-gray-500 flex-wrap">
                           <Calendar className="h-3 w-3" />
                           <span>{formatDate(model.createdAt)}</span>
                           <Badge variant="outline" className="bg-blue-900/50 text-blue-300 border-blue-500/30">
-                            GLB
+                            {model.quality?.toUpperCase() || "MEDIUM"}
+                          </Badge>
+                          <Badge variant="outline" className="bg-purple-900/50 text-purple-300 border-purple-500/30">
+                            {model.format?.toUpperCase() || "GLB"}
                           </Badge>
                         </div>
                       </div>

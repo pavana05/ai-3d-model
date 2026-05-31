@@ -1,56 +1,31 @@
 import { type NextRequest, NextResponse } from "next/server"
+import crypto from "crypto"
 
-// Simple in-memory storage (replace with database in production)
-const users: Array<{
-  id: string
-  name: string
-  email: string
-  password: string
-}> = []
-
-// Simple hash function (replace with bcrypt in production)
-function simpleHash(password: string): string {
-  let hash = 0
-  for (let i = 0; i < password.length; i++) {
-    const char = password.charCodeAt(i)
-    hash = (hash << 5) - hash + char
-    hash = hash & hash // Convert to 32-bit integer
-  }
-  return hash.toString()
-}
-
-// Simple token generation (replace with JWT in production)
-function generateToken(userId: string): string {
-  const payload = {
-    userId,
-    timestamp: Date.now(),
-  }
-  return btoa(JSON.stringify(payload))
-}
+const users: Record<string, { id: string; name: string; email: string; password_hash: string }> = {}
 
 export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json()
 
-    // Validation
     if (!email || !password) {
       return NextResponse.json({ success: false, error: "Email and password are required" }, { status: 400 })
     }
 
-    // Find user
-    const user = users.find((user) => user.email === email)
+    // Find user by email
+    const user = Object.values(users).find((u) => u.email === email)
+
     if (!user) {
       return NextResponse.json({ success: false, error: "Invalid email or password" }, { status: 401 })
     }
 
-    // Check password
-    const hashedPassword = simpleHash(password)
-    if (user.password !== hashedPassword) {
+    // Verify password
+    const passwordHash = crypto.createHash("sha256").update(password).digest("hex")
+    if (user.password_hash !== passwordHash) {
       return NextResponse.json({ success: false, error: "Invalid email or password" }, { status: 401 })
     }
 
     // Generate token
-    const token = generateToken(user.id)
+    const token = Buffer.from(JSON.stringify({ userId: user.id, email: user.email })).toString("base64")
 
     return NextResponse.json({
       success: true,
@@ -62,7 +37,7 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error("Login error:", error)
+    console.error("[v0] Login error:", error)
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
   }
 }

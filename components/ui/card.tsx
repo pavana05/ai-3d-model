@@ -33,18 +33,24 @@ const CardContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDi
     <div
       ref={ref}
       className={cn(
-        "relative p-6 sm:p-8",
+        "relative flex flex-col items-center justify-center p-6 sm:p-8",
+        // Glass morphism effect with premium styling
         "bg-gradient-to-br from-background/98 via-background/95 to-background/92",
         "backdrop-blur-xl",
-        "rounded-2xl",
+        "rounded-xl",
         "border border-white/10",
-        "shadow-2xl shadow-black/20",
-        "before:absolute before:inset-0 before:rounded-2xl before:bg-gradient-to-br before:from-white/5 before:via-transparent before:to-transparent before:pointer-events-none",
-        "after:absolute after:top-0 after:left-6 after:right-6 after:h-px after:bg-gradient-to-r after:from-transparent after:via-white/30 after:to-transparent",
-        "transition-all duration-500 ease-out",
-        "hover:shadow-3xl hover:shadow-blue-500/10 hover:border-white/20",
-        "group-hover:bg-gradient-to-br group-hover:from-background/99 group-hover:via-background/97 group-hover:to-background/94",
-        "group-hover:scale-[1.01] group-hover:shadow-blue-500/20",
+        "shadow-lg shadow-black/20",
+        // Premium edge highlights and depth
+        "before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-br before:from-white/5 before:via-transparent before:to-transparent before:pointer-events-none",
+        "after:absolute after:top-0 after:left-6 after:right-6 after:h-px after:bg-gradient-to-r after:from-transparent after:via-white/20 after:to-transparent",
+        // Smooth transitions for professional feel
+        "transition-all duration-300 ease-out",
+        // Hover states for interactivity
+        "hover:shadow-xl hover:shadow-blue-500/5 hover:border-white/15",
+        "hover:bg-gradient-to-br hover:from-background/99 hover:via-background/97 hover:to-background/94",
+        // Subtle scale effect on hover
+        "hover:scale-[1.005]",
+        // Overflow hidden for clean edge rendering
         "overflow-hidden",
         className,
       )}
